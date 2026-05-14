@@ -1,0 +1,163 @@
+```html id="wvh9ck"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Asset</title>
+
+    <style>
+
+        body{
+            font-family: Arial, sans-serif;
+            background:#f4f4f4;
+            margin:0;
+            padding:0;
+        }
+
+        .container{
+            max-width:900px;
+            margin:auto;
+            padding:40px 20px;
+        }
+
+        .search-box,
+        .asset-box{
+            background:white;
+            padding:30px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom:20px;
+        }
+
+        h1{
+            text-align:center;
+            margin-bottom:30px;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            border:1px solid #ccc;
+            border-radius:8px;
+        }
+
+        .btn{
+            width:100%;
+            padding:14px;
+            background:#007BFF;
+            color:white;
+            border:none;
+            border-radius:8px;
+            margin-top:20px;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        .btn:hover{
+            background:#0056b3;
+        }
+
+        img{
+            width:100%;
+            max-height:500px;
+            object-fit:cover;
+            border-radius:10px;
+            margin-top:20px;
+        }
+
+        .warning{
+            background:#ffdddd;
+            color:#b30000;
+            padding:15px;
+            border-radius:8px;
+            margin-top:20px;
+            font-weight:bold;
+        }
+
+        .info{
+            margin-top:15px;
+            line-height:1.8;
+        }
+
+        .back{
+            display:block;
+            text-align:center;
+            margin-top:20px;
+            text-decoration:none;
+            color:#007BFF;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="search-box">
+
+            <h1>Search Asset</h1>
+
+            <form method="POST">
+
+                <input
+                    type="text"
+                    name="asset_id"
+                    placeholder="Enter Asset ID"
+                    required
+                >
+
+                <button type="submit" class="btn">
+                    Search
+                </button>
+
+            </form>
+
+        </div>
+
+        {% if asset %}
+
+        <div class="asset-box">
+
+            <h2>Asset Details</h2>
+
+            <img src="{{ url_for('static', filename='uploads/' + asset[6]) }}">
+
+            <div class="info">
+
+                <p><strong>Asset ID:</strong> {{ asset[1] }}</p>
+
+                <p><strong>Depot:</strong> {{ asset[2] }}</p>
+
+                <p><strong>Status:</strong> {{ asset[3] }}</p>
+
+                <p><strong>Captured By:</strong> {{ asset[4] }}</p>
+
+                <p><strong>Employee Number:</strong> {{ asset[5] }}</p>
+
+                <p><strong>Capture Date:</strong> {{ asset[7] }}</p>
+
+            </div>
+
+            {% if update_required %}
+
+            <div class="warning">
+                ⚠️ Update required for this asset
+            </div>
+
+            {% endif %}
+
+        </div>
+
+        {% endif %}
+
+        <a href="/" class="back">
+            ← Back to Home
+        </a>
+
+    </div>
+
+</body>
+</html>
+```

@@ -1,0 +1,123 @@
+```html id="5rzht9"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Required</title>
+
+    <style>
+
+        body{
+            font-family: Arial, sans-serif;
+            background:#f4f4f4;
+            margin:0;
+            padding:0;
+        }
+
+        .container{
+            max-width:1000px;
+            margin:auto;
+            padding:40px 20px;
+        }
+
+        .box{
+            background:white;
+            padding:30px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1{
+            text-align:center;
+            margin-bottom:30px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        th, td{
+            padding:15px;
+            border-bottom:1px solid #ddd;
+            text-align:left;
+        }
+
+        th{
+            background:#007BFF;
+            color:white;
+        }
+
+        tr:hover{
+            background:#f2f2f2;
+        }
+
+        .empty{
+            text-align:center;
+            padding:20px;
+            color:#666;
+        }
+
+        .back{
+            display:block;
+            text-align:center;
+            margin-top:20px;
+            text-decoration:none;
+            color:#007BFF;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="box">
+
+            <h1>Assets Requiring Update</h1>
+
+            {% if assets %}
+
+            <table>
+
+                <tr>
+                    <th>Asset ID</th>
+                    <th>Depot</th>
+                    <th>Status</th>
+                    <th>Last Update</th>
+                </tr>
+
+                {% for asset in assets %}
+
+                <tr>
+                    <td>{{ asset[1] }}</td>
+                    <td>{{ asset[2] }}</td>
+                    <td>{{ asset[3] }}</td>
+                    <td>{{ asset[7] }}</td>
+                </tr>
+
+                {% endfor %}
+
+            </table>
+
+            {% else %}
+
+            <div class="empty">
+                No assets currently require updates.
+            </div>
+
+            {% endif %}
+
+            <a href="/" class="back">
+                ← Back to Home
+            </a>
+
+        </div>
+
+    </div>
+
+</body>
+</html>
+```

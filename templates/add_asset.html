@@ -1,0 +1,137 @@
+```html id="tya4cr"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Asset</title>
+
+    <style>
+
+        body{
+            font-family: Arial, sans-serif;
+            background:#f4f4f4;
+            margin:0;
+            padding:0;
+        }
+
+        .container{
+            max-width:700px;
+            margin:auto;
+            padding:40px 20px;
+        }
+
+        .form-box{
+            background:white;
+            padding:30px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1{
+            text-align:center;
+            margin-bottom:30px;
+        }
+
+        label{
+            display:block;
+            margin-top:15px;
+            margin-bottom:5px;
+            font-weight:bold;
+        }
+
+        input, select{
+            width:100%;
+            padding:12px;
+            border:1px solid #ccc;
+            border-radius:8px;
+        }
+
+        .btn{
+            width:100%;
+            padding:14px;
+            background:#007BFF;
+            color:white;
+            border:none;
+            border-radius:8px;
+            margin-top:25px;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        .btn:hover{
+            background:#0056b3;
+        }
+
+        .back{
+            display:block;
+            text-align:center;
+            margin-top:20px;
+            text-decoration:none;
+            color:#007BFF;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="form-box">
+
+            <h1>Add Asset</h1>
+
+            <form method="POST" enctype="multipart/form-data">
+
+                <label>Asset ID</label>
+                <input type="text" name="asset_id" required>
+
+                <label>Depot</label>
+                <select name="depot" required>
+                    <option value="">Select Depot</option>
+                    <option value="Xinavane">Xinavane</option>
+                    <option value="Mafambisse">Mafambisse</option>
+                    <option value="Marromeu">Marromeu</option>
+                    <option value="Matola">Matola</option>
+                </select>
+
+                <label>Status</label>
+                <select name="status" required>
+                    <option value="">Select Status</option>
+                    <option value="In Use">In Use</option>
+                    <option value="Not In Use">Not In Use</option>
+                </select>
+
+                <label>Captured By</label>
+                <input type="text" name="captured_by" required>
+
+                <label>Employee Number</label>
+                <input type="text" name="employee_number" required>
+
+                <label>Upload Photo</label>
+                <input 
+                    type="file" 
+                    name="image"
+                    accept="image/*"
+                    capture="environment"
+                    required
+                >
+
+                <button type="submit" class="btn">
+                    Save Asset
+                </button>
+
+            </form>
+
+            <a href="/" class="back">
+                ← Back to Home
+            </a>
+
+        </div>
+
+    </div>
+
+</body>
+</html>
+```
