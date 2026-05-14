@@ -138,7 +138,7 @@ def search():
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
             days_difference = (datetime.now() - capture_date).days
 
-            if days_difference >= 365:
+            if days_difference >= 180:
                 update_required = True
 
     return render_template(
