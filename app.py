@@ -1,243 +1,101 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file
-from werkzeug.utils import secure_filename
-import sqlite3
-import os
-import csv
-from datetime import datetime
-
-app = Flask(__name__)
-
-# =========================
-# CONFIGURAÇÕES
-# =========================
-
-UPLOAD_FOLDER = "static/uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# CAMINHO ABSOLUTO DO BANCO
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "assets.db")
-
-# =========================
-# DATABASE
-# =========================
-
-def init_db():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS assets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            asset_id TEXT,
-            depot TEXT,
-            status TEXT,
-            captured_by TEXT,
-            employee_number TEXT,
-            image TEXT,
-            capture_date TEXT
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# =========================
-# HOME
-# =========================
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-# =========================
-# ADD ASSET
-# =========================
-
-@app.route("/add", methods=["GET", "POST"])
-def add_asset():
-
-    if request.method == "POST":
-
-        asset_id = request.form["asset_id"]
-        depot = request.form["depot"]
-        status = request.form["status"]
-        captured_by = request.form["captured_by"]
-        employee_number = request.form["employee_number"]
-
-        image = request.files["image"]
-        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # GERAR NOME ÚNICO
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"{timestamp}_{secure_filename(image.filename)}"
-
-        image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        image.save(image_path)
-
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            INSERT INTO assets (
-                asset_id,
-                depot,
-                status,
-                captured_by,
-                employee_number,
-                image,
-                capture_date
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            asset_id,
-            depot,
-            status,
-            captured_by,
-            employee_number,
-            filename,
-            capture_date
-        ))
-
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for("index"))
-
-    return render_template("add_asset.html")
-
-# =========================
-# SEARCH
-# =========================
-
-@app.route("/search", methods=["GET", "POST"])
-def search():
-
-    asset = None
-    update_required = False
-
-    if request.method == "POST":
-        asset_id = request.form["asset_id"]
-
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT * FROM assets
-            WHERE asset_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-        """, (asset_id,))
-
-        asset = cursor.fetchone()
-        conn.close()
-
-        if asset:
-            capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
-            days_difference = (datetime.now() - capture_date).days
-
-            if days_difference >= 180:  # Semestral
-                update_required = True
-
-    return render_template(
-        "search.html",
-        asset=asset,
-        update_required=update_required
-    )
-
-# =========================
-# UPDATE REQUIRED LIST
-# =========================
-
-@app.route("/updates")
-def updates():
-
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM assets")
-    assets = cursor.fetchall()
-    conn.close()
-
-    expired_assets = []
-
-    for asset in assets:
-        capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
-        days_difference = (datetime.now() - capture_date).days
-
-        if days_difference >= 180:
-            expired_assets.append(asset)
-
-    return render_template(
-        "updates.html",
-        assets=expired_assets
-    )
-
-# =========================
-# SUMMARY (RESUMO POR DEPÓSITO)
-# =========================
-
-@app.route("/summary")
-def summary():
-
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT depot, asset_id, capture_date FROM assets")
-    rows = cursor.fetchall()
-    conn.close()
-
-    summary = {}
-
-    for depot, asset_id, capture_date in rows:
-        if depot not in summary:
-            summary[depot] = {
-                "total": 0,
-                "verificados": 0,
-                "nao_verificados": 0
-            }
-
-        summary[depot]["total"] += 1
-
-        days = (datetime.now() - datetime.strptime(capture_date, "%Y-%m-%d %H:%M:%S")).days
-
-        if days <= 180:
-            summary[depot]["verificados"] += 1
-        else:
-            summary[depot]["nao_verificados"] += 1
-
-    return render_template("summary.html", summary=summary)
-
-# =========================
-# EXPORT CSV
-# =========================
+import io
+import zipfile
+from flask import Response, request
 
 @app.route("/export")
 def export():
 
-    filename = "assets_export.csv"
-    filepath = os.path.join(BASE_DIR, filename)
+    depot = request.args.get("depot", "all")
+    filter_type = request.args.get("filter", "all")
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM assets")
+    query = """
+        SELECT asset_id, depot, status, captured_by, employee_number, image, capture_date
+        FROM assets
+        WHERE 1=1
+    """
+    params = []
+
+    # =========================
+    # FILTRO DEPOT
+    # =========================
+    if depot != "all":
+        query += " AND depot = ?"
+        params.append(depot)
+
+    # =========================
+    # FILTRO STATUS (180 dias)
+    # =========================
+    if filter_type == "verified":
+        query += " AND julianday('now') - julianday(capture_date) <= 180"
+
+    elif filter_type == "unverified":
+        query += " AND julianday('now') - julianday(capture_date) > 180"
+
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
 
-    with open(filepath, "w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["ID", "Asset ID", "Depot", "Status", "Captured By", "Employee No", "Image", "Capture Date"])
-        writer.writerows(rows)
+    # =========================
+    # CRIAR ZIP (CSV + IMAGENS)
+    # =========================
+    zip_buffer = io.BytesIO()
 
-    return send_file(filepath, as_attachment=True)
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
 
-# =========================
-# RUN
-# =========================
+        # -------------------------
+        # CSV
+        # -------------------------
+        csv_buffer = io.StringIO()
+        writer = csv.writer(csv_buffer)
 
-if __name__ == "__main__":
-    app.run(debug=True)
+        writer.writerow([
+            "Asset ID",
+            "Depot",
+            "Status",
+            "Captured By",
+            "Employee No",
+            "Image URL",
+            "Capture Date"
+        ])
+
+        BASE_URL = "http://127.0.0.1:5000"
+
+        for row in rows:
+
+            asset_id, depot_val, status, captured_by, emp_no, image, capture_date = row
+
+            image_path = os.path.join("static/uploads", image)
+
+            # LINK DA IMAGEM
+            image_url = f"{BASE_URL}/static/uploads/{image}" if image else ""
+
+            writer.writerow([
+                asset_id,
+                depot_val,
+                status,
+                captured_by,
+                emp_no,
+                image_url,
+                capture_date
+            ])
+
+            # -------------------------
+            # ADICIONAR IMAGEM AO ZIP
+            # -------------------------
+            if image and os.path.exists(image_path):
+                zip_file.write(image_path, f"images/{image}")
+
+        zip_file.writestr("assets.csv", csv_buffer.getvalue())
+
+    zip_buffer.seek(0)
+
+    return Response(
+        zip_buffer.getvalue(),
+        mimetype="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=export_{depot}_{filter_type}.zip"
+        }
+    )
