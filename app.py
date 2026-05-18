@@ -1,158 +1,243 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Verification</title>
+from flask import Flask, render_template, request, redirect, url_for, send_file
+from werkzeug.utils import secure_filename
+import sqlite3
+import os
+import csv
+from datetime import datetime
 
-    <style>
-        body{
-            font-family: Arial, sans-serif;
-            background:#f4f4f4;
-            margin:0;
-            padding:0;
-        }
+app = Flask(__name__)
 
-        .logo-container{
-            text-align:center;
-            margin-top:30px;
-            margin-bottom:10px;
-        }
+# =========================
+# CONFIGURAÇÕES
+# =========================
 
-        .logo{
-            height:120px;
-        }
+UPLOAD_FOLDER = "static/uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-        .container{
-            max-width:900px;
-            margin:auto;
-            padding:20px;
-            text-align:center;
-        }
+# CAMINHO ABSOLUTO DO BANCO
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, "assets.db")
 
-        h1{
-            color:#222;
-            margin-bottom:10px;
-        }
+# =========================
+# DATABASE
+# =========================
 
-        p{
-            color:#555;
-            margin-bottom:40px;
-        }
+def init_db():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
 
-        .cards{
-            display:grid;
-            grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
-            gap:20px;
-        }
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_id TEXT,
+            depot TEXT,
+            status TEXT,
+            captured_by TEXT,
+            employee_number TEXT,
+            image TEXT,
+            capture_date TEXT
+        )
+    """)
 
-        .card{
-            background:white;
-            padding:30px;
-            border-radius:12px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.1);
-        }
+    conn.commit()
+    conn.close()
 
-        .card h2{
-            margin-bottom:15px;
-            color:#333;
-        }
+init_db()
 
-        .btn{
-            display:inline-block;
-            padding:12px 20px;
-            background:#007BFF;
-            color:white;
-            text-decoration:none;
-            border-radius:8px;
-            margin-top:15px;
-        }
+# =========================
+# HOME
+# =========================
 
-        .btn:hover{
-            background:#0056b3;
-        }
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-        select{
-            padding:10px;
-            border-radius:8px;
-            border:1px solid #bbb;
-            width:100%;
-        }
-    </style>
+# =========================
+# ADD ASSET
+# =========================
 
-</head>
-<body>
+@app.route("/add", methods=["GET", "POST"])
+def add_asset():
 
-    <!-- LOGO -->
-    <div class="logo-container">
-        <img src="{{ url_for('static', filename='logo.png') }}" 
-             alt="Logo" 
-             class="logo">
-    </div>
+    if request.method == "POST":
 
-    <div class="container">
+        asset_id = request.form["asset_id"]
+        depot = request.form["depot"]
+        status = request.form["status"]
+        captured_by = request.form["captured_by"]
+        employee_number = request.form["employee_number"]
 
-        <h1>Asset Verification</h1>
+        image = request.files["image"]
+        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        <p>Asset registration and verification platform</p>
+        # GERAR NOME ÚNICO
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        filename = f"{timestamp}_{secure_filename(image.filename)}"
 
-        <div class="cards">
+        image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        image.save(image_path)
 
-            <div class="card">
-                <h2>Add Asset</h2>
-                <p>Register a new asset with photo and details.</p>
-                <a href="/add" class="btn">Add Asset</a>
-            </div>
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
 
-            <div class="card">
-                <h2>Search Asset</h2>
-                <p>Search and verify asset information.</p>
-                <a href="/search" class="btn">Search</a>
-            </div>
+        cursor.execute("""
+            INSERT INTO assets (
+                asset_id,
+                depot,
+                status,
+                captured_by,
+                employee_number,
+                image,
+                capture_date
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            asset_id,
+            depot,
+            status,
+            captured_by,
+            employee_number,
+            filename,
+            capture_date
+        ))
 
-            <div class="card">
-                <h2>Update Required</h2>
-                <p>View assets that require image updates.</p>
-                <a href="/updates" class="btn">View List</a>
-            </div>
+        conn.commit()
+        conn.close()
 
-            <div class="card">
-                <h2>Summary</h2>
-                <p>Overview of verified and pending assets by depot.</p>
-                <a href="/summary" class="btn">View Summary</a>
-            </div>
+        return redirect(url_for("index"))
 
-            <!-- EXPORT CSV COM FILTROS -->
-            <div class="card">
-                <h2>Export Data</h2>
-                <p>Download filtered asset data.</p>
+    return render_template("add_asset.html")
 
-                <form action="/export" method="GET" style="display:flex; flex-direction:column; gap:12px;">
+# =========================
+# SEARCH
+# =========================
 
-                    <label><strong>Select Depot:</strong></label>
-                    <select name="depot">
-                        <option value="all">All Depots</option>
-                        <option value="Maragra">Maragra</option>
-                        <option value="Xinavane">Xinavane</option>
-                        <option value="Matola">Matola</option>
-                        <option value="Mafambisse">Mafambisse</option>
-                        <option value="Marromeu">Marromeu</option>
-                    </select>
+@app.route("/search", methods=["GET", "POST"])
+def search():
 
-                    <label><strong>Filter:</strong></label>
-                    <select name="filter">
-                        <option value="all">All Assets</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
-                    </select>
+    asset = None
+    update_required = False
 
-                    <button class="btn" type="submit">Download CSV</button>
-                </form>
-            </div>
+    if request.method == "POST":
+        asset_id = request.form["asset_id"]
 
-        </div>
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
 
-    </div>
+        cursor.execute("""
+            SELECT * FROM assets
+            WHERE asset_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+        """, (asset_id,))
 
-</body>
-</html>
+        asset = cursor.fetchone()
+        conn.close()
+
+        if asset:
+            capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
+            days_difference = (datetime.now() - capture_date).days
+
+            if days_difference >= 180:  # Semestral
+                update_required = True
+
+    return render_template(
+        "search.html",
+        asset=asset,
+        update_required=update_required
+    )
+
+# =========================
+# UPDATE REQUIRED LIST
+# =========================
+
+@app.route("/updates")
+def updates():
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM assets")
+    assets = cursor.fetchall()
+    conn.close()
+
+    expired_assets = []
+
+    for asset in assets:
+        capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
+        days_difference = (datetime.now() - capture_date).days
+
+        if days_difference >= 180:
+            expired_assets.append(asset)
+
+    return render_template(
+        "updates.html",
+        assets=expired_assets
+    )
+
+# =========================
+# SUMMARY (RESUMO POR DEPÓSITO)
+# =========================
+
+@app.route("/summary")
+def summary():
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT depot, asset_id, capture_date FROM assets")
+    rows = cursor.fetchall()
+    conn.close()
+
+    summary = {}
+
+    for depot, asset_id, capture_date in rows:
+        if depot not in summary:
+            summary[depot] = {
+                "total": 0,
+                "verificados": 0,
+                "nao_verificados": 0
+            }
+
+        summary[depot]["total"] += 1
+
+        days = (datetime.now() - datetime.strptime(capture_date, "%Y-%m-%d %H:%M:%S")).days
+
+        if days <= 180:
+            summary[depot]["verificados"] += 1
+        else:
+            summary[depot]["nao_verificados"] += 1
+
+    return render_template("summary.html", summary=summary)
+
+# =========================
+# EXPORT CSV
+# =========================
+
+@app.route("/export")
+def export():
+
+    filename = "assets_export.csv"
+    filepath = os.path.join(BASE_DIR, filename)
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM assets")
+    rows = cursor.fetchall()
+    conn.close()
+
+    with open(filepath, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["ID", "Asset ID", "Depot", "Status", "Captured By", "Employee No", "Image", "Capture Date"])
+        writer.writerows(rows)
+
+    return send_file(filepath, as_attachment=True)
+
+# =========================
+# RUN
+# =========================
+
+if __name__ == "__main__":
+    app.run(debug=True)
