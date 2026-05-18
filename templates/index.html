@@ -1,46 +1,39 @@
-<!-- NOVO: EXPORT DATA COM OPÇÕES -->
-<div class="card">
-    <h2>Export Data</h2>
-    <p>Download assets by depot and verification status.</p>
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline">Export data</Button>
+  </DropdownMenuTrigger>
 
-    <div style="display:flex; flex-direction:column; gap:10px;">
+  <DropdownMenuContent className="w-56">
+    <DropdownMenuLabel>Export options</DropdownMenuLabel>
 
-        <!-- Export por Depot -->
-        <form action="/export" method="GET">
-            <label><strong>Export by Depot:</strong></label>
-            <select name="depot">
-                <option value="all">All Depots</option>
-                <option value="A">Depot A</option>
-                <option value="B">Depot B</option>
-                <option value="C">Depot C</option>
-            </select>
-            <input type="hidden" name="filter" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    {/* Escolher o depot */}
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>Export by depot</DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        {depots.map((depot) => (
+          <DropdownMenuItem key={depot.id}
+            onSelect={() => handleExport({ depotId: depot.id })}
+          >
+            {depot.name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
 
-        <!-- Export Verificados -->
-        <form action="/export" method="GET">
-            <label><strong>Verified Only:</strong></label>
-            <input type="hidden" name="filter" value="verified">
-            <input type="hidden" name="depot" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    {/* Filtrar por verificação */}
+    <DropdownMenuSeparator />
+    <DropdownMenuLabel>Asset filter</DropdownMenuLabel>
 
-        <!-- Export Não Verificados -->
-        <form action="/export" method="GET">
-            <label><strong>Unverified Only:</strong></label>
-            <input type="hidden" name="filter" value="unverified">
-            <input type="hidden" name="depot" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    <DropdownMenuItem onSelect={() => handleExport({ filter: 'verified' })}>
+      Verified assets
+    </DropdownMenuItem>
 
-        <!-- Export Geral -->
-        <form action="/export" method="GET">
-            <label><strong>All Assets (&lt;180 days)</strong></label>
-            <input type="hidden" name="filter" value="all">
-            <input type="hidden" name="depot" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    <DropdownMenuItem onSelect={() => handleExport({ filter: 'unverified' })}>
+      Unverified assets
+    </DropdownMenuItem>
 
-    </div>
-</div>
+    <DropdownMenuItem onSelect={() => handleExport({ filter: 'all' })}>
+      All assets
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
