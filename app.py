@@ -1,7 +1,3 @@
-import io
-import zipfile
-from flask import Response, request
-
 @app.route("/export")
 def export():
 
@@ -18,16 +14,12 @@ def export():
     """
     params = []
 
-    # =========================
-    # FILTRO DEPOT
-    # =========================
+    # DEPOT FILTER
     if depot != "all":
         query += " AND depot = ?"
         params.append(depot)
 
-    # =========================
-    # FILTRO STATUS (180 dias)
-    # =========================
+    # 180 DAYS FILTER
     if filter_type == "verified":
         query += " AND julianday('now') - julianday(capture_date) <= 180"
 
@@ -38,16 +30,11 @@ def export():
     rows = cursor.fetchall()
     conn.close()
 
-    # =========================
-    # CRIAR ZIP (CSV + IMAGENS)
-    # =========================
+    # ZIP IN MEMORY
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
 
-        # -------------------------
-        # CSV
-        # -------------------------
         csv_buffer = io.StringIO()
         writer = csv.writer(csv_buffer)
 
@@ -64,12 +51,12 @@ def export():
         BASE_URL = "http://127.0.0.1:5000"
 
         for row in rows:
-
             asset_id, depot_val, status, captured_by, emp_no, image, capture_date = row
 
-            image_path = os.path.join("static/uploads", image)
+            # PATH DA IMAGEM
+            image_path = os.path.join("static/uploads", image) if image else ""
 
-            # LINK DA IMAGEM
+            # URL DA IMAGEM
             image_url = f"{BASE_URL}/static/uploads/{image}" if image else ""
 
             writer.writerow([
@@ -82,9 +69,7 @@ def export():
                 capture_date
             ])
 
-            # -------------------------
-            # ADICIONAR IMAGEM AO ZIP
-            # -------------------------
+            # ADD IMAGE TO ZIP
             if image and os.path.exists(image_path):
                 zip_file.write(image_path, f"images/{image}")
 
