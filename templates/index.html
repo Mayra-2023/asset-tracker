@@ -66,6 +66,7 @@
             text-decoration:none;
             border-radius:8px;
             margin-top:15px;
+            cursor:pointer;
         }
 
         .btn:hover{
@@ -116,16 +117,10 @@
                 <a href="/updates" class="btn">View List</a>
             </div>
 
-            <div class="card">
-                <h2>Summary</h2>
-                <p>Overview of verified and pending assets by depot.</p>
-                <a href="/summary" class="btn">View Summary</a>
-            </div>
-
-            <!-- EXPORT CSV COM FILTROS -->
+            <!-- EXPORT ZIP + CSV -->
             <div class="card">
                 <h2>Export Data</h2>
-                <p>Download filtered asset data.</p>
+                <p>Download filtered asset data with images.</p>
 
                 <form action="/export" method="GET" style="display:flex; flex-direction:column; gap:12px;">
 
@@ -146,7 +141,7 @@
                         <option value="unverified">Unverified Only</option>
                     </select>
 
-                    <button class="btn" type="submit">Download CSV</button>
+                    <button class="btn" type="submit">Download Export</button>
                 </form>
             </div>
 
