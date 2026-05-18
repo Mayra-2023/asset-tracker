@@ -71,6 +71,13 @@
         .btn:hover{
             background:#0056b3;
         }
+
+        select{
+            padding:10px;
+            border-radius:8px;
+            border:1px solid #bbb;
+            width:100%;
+        }
     </style>
 
 </head>
@@ -109,18 +116,38 @@
                 <a href="/updates" class="btn">View List</a>
             </div>
 
-            <!-- NOVO: SUMMARY -->
             <div class="card">
                 <h2>Summary</h2>
                 <p>Overview of verified and pending assets by depot.</p>
                 <a href="/summary" class="btn">View Summary</a>
             </div>
 
-            <!-- NOVO: EXPORT CSV -->
+            <!-- EXPORT CSV COM FILTROS -->
             <div class="card">
                 <h2>Export Data</h2>
-                <p>Download all assets in CSV format.</p>
-                <a href="/export" class="btn">Export CSV</a>
+                <p>Download filtered asset data.</p>
+
+                <form action="/export" method="GET" style="display:flex; flex-direction:column; gap:12px;">
+
+                    <label><strong>Select Depot:</strong></label>
+                    <select name="depot">
+                        <option value="all">All Depots</option>
+                        <option value="Maragra">Maragra</option>
+                        <option value="Xinavane">Xinavane</option>
+                        <option value="Matola">Matola</option>
+                        <option value="Mafambisse">Mafambisse</option>
+                        <option value="Marromeu">Marromeu</option>
+                    </select>
+
+                    <label><strong>Filter:</strong></label>
+                    <select name="filter">
+                        <option value="all">All Assets</option>
+                        <option value="verified">Verified Only</option>
+                        <option value="unverified">Unverified Only</option>
+                    </select>
+
+                    <button class="btn" type="submit">Download CSV</button>
+                </form>
             </div>
 
         </div>
