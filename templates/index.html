@@ -1,46 +1,37 @@
-<!-- NOVO: EXPORT DATA COM OPÇÕES -->
-<div class="card">
-    <h2>Export Data</h2>
-    <p>Download assets by depot and verification status.</p>
+from flask import request, Response
+import csv
+from datetime import datetime, timedelta
 
-    <div style="display:flex; flex-direction:column; gap:10px;">
+@app.route("/export")
+def export_data():
+    depot = request.args.get("depot", "all")
+    filter_type = request.args.get("filter", "all")
 
-        <!-- Export por Depot -->
-        <form action="/export" method="GET">
-            <label><strong>Export by Depot:</strong></label>
-            <select name="depot">
-                <option value="all">All Depots</option>
-                <option value="A">Depot A</option>
-                <option value="B">Depot B</option>
-                <option value="C">Depot C</option>
-            </select>
-            <input type="hidden" name="filter" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    # Carregar assets
+    assets = load_all_assets()  # você já deve ter isso no sistema
 
-        <!-- Export Verificados -->
-        <form action="/export" method="GET">
-            <label><strong>Verified Only:</strong></label>
-            <input type="hidden" name="filter" value="verified">
-            <input type="hidden" name="depot" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    # filtro: <180 dias
+    cutoff = datetime.now() - timedelta(days=180)
+    assets = [a for a in assets if a["updated_at"] >= cutoff]
 
-        <!-- Export Não Verificados -->
-        <form action="/export" method="GET">
-            <label><strong>Unverified Only:</strong></label>
-            <input type="hidden" name="filter" value="unverified">
-            <input type="hidden" name="depot" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    # filtro depot
+    if depot != "all":
+        assets = [a for a in assets if a["depot"] == depot]
 
-        <!-- Export Geral -->
-        <form action="/export" method="GET">
-            <label><strong>All Assets (&lt;180 days)</strong></label>
-            <input type="hidden" name="filter" value="all">
-            <input type="hidden" name="depot" value="all">
-            <button class="btn" type="submit">Download</button>
-        </form>
+    # filtro verificação
+    if filter_type == "verified":
+        assets = [a for a in assets if a["verified"] is True]
 
-    </div>
-</div>
+    if filter_type == "unverified":
+        assets = [a for a in assets if a["verified"] is False]
+
+    # gerar CSV
+    def generate():
+        data = csv.writer(E := [])
+        header = assets[0].keys() if assets else []
+        yield ",".join(header) + "\n"
+        for a in assets:
+            yield ",".join([str(a[k]) for k in header]) + "\n"
+
+    return Response(generate(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment;filename=export.csv"})
