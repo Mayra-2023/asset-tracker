@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 import sqlite3
 import os
+import csv
 from datetime import datetime
 
 app = Flask(__name__)
@@ -14,7 +15,7 @@ UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# CORREÇÃO: SEMPRE USAR CAMINHO ABSOLUTO DO BANCO
+# CAMINHO ABSOLUTO DO BANCO
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
@@ -70,7 +71,7 @@ def add_asset():
         image = request.files["image"]
         capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # GERAR NOME ÚNICO PARA A IMAGEM (EVITA SOBRESCREVER)
+        # GERAR NOME ÚNICO
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         filename = f"{timestamp}_{secure_filename(image.filename)}"
 
@@ -138,8 +139,7 @@ def search():
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
             days_difference = (datetime.now() - capture_date).days
 
-            # Agora SEMESTRAL (180 dias)
-            if days_difference >= 180:
+            if days_difference >= 180:  # Semestral
                 update_required = True
 
     return render_template(
@@ -168,13 +168,72 @@ def updates():
         capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
         days_difference = (datetime.now() - capture_date).days
 
-        if days_difference >= 180:  # Semestral
+        if days_difference >= 180:
             expired_assets.append(asset)
 
     return render_template(
         "updates.html",
         assets=expired_assets
     )
+
+# =========================
+# SUMMARY (RESUMO POR DEPÓSITO)
+# =========================
+
+@app.route("/summary")
+def summary():
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT depot, asset_id, capture_date FROM assets")
+    rows = cursor.fetchall()
+    conn.close()
+
+    summary = {}
+
+    for depot, asset_id, capture_date in rows:
+        if depot not in summary:
+            summary[depot] = {
+                "total": 0,
+                "verificados": 0,
+                "nao_verificados": 0
+            }
+
+        summary[depot]["total"] += 1
+
+        days = (datetime.now() - datetime.strptime(capture_date, "%Y-%m-%d %H:%M:%S")).days
+
+        if days <= 180:
+            summary[depot]["verificados"] += 1
+        else:
+            summary[depot]["nao_verificados"] += 1
+
+    return render_template("summary.html", summary=summary)
+
+# =========================
+# EXPORT CSV
+# =========================
+
+@app.route("/export")
+def export():
+
+    filename = "assets_export.csv"
+    filepath = os.path.join(BASE_DIR, filename)
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM assets")
+    rows = cursor.fetchall()
+    conn.close()
+
+    with open(filepath, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["ID", "Asset ID", "Depot", "Status", "Captured By", "Employee No", "Image", "Capture Date"])
+        writer.writerows(rows)
+
+    return send_file(filepath, as_attachment=True)
 
 # =========================
 # RUN
