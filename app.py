@@ -7,15 +7,16 @@ from datetime import datetime
 app = Flask(__name__)
 
 # =========================
-# CONFIG
+# CONFIGURAÇÕES
 # =========================
 
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-DATABASE = "assets.db"
+# CORREÇÃO: SEMPRE USAR CAMINHO ABSOLUTO DO BANCO
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, "assets.db")
 
 # =========================
 # DATABASE
@@ -67,12 +68,13 @@ def add_asset():
         employee_number = request.form["employee_number"]
 
         image = request.files["image"]
-
         capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        filename = secure_filename(image.filename)
-        image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        # GERAR NOME ÚNICO PARA A IMAGEM (EVITA SOBRESCREVER)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        filename = f"{timestamp}_{secure_filename(image.filename)}"
 
+        image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(image_path)
 
         conn = sqlite3.connect(DATABASE)
@@ -117,7 +119,6 @@ def search():
     update_required = False
 
     if request.method == "POST":
-
         asset_id = request.form["asset_id"]
 
         conn = sqlite3.connect(DATABASE)
@@ -131,13 +132,13 @@ def search():
         """, (asset_id,))
 
         asset = cursor.fetchone()
-
         conn.close()
 
         if asset:
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
             days_difference = (datetime.now() - capture_date).days
 
+            # Agora SEMESTRAL (180 dias)
             if days_difference >= 180:
                 update_required = True
 
@@ -158,9 +159,7 @@ def updates():
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM assets")
-
     assets = cursor.fetchall()
-
     conn.close()
 
     expired_assets = []
@@ -169,7 +168,7 @@ def updates():
         capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
         days_difference = (datetime.now() - capture_date).days
 
-        if days_difference >= 365:
+        if days_difference >= 180:  # Semestral
             expired_assets.append(asset)
 
     return render_template(
