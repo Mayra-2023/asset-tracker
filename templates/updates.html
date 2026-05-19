@@ -3,120 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Required</title>
-
-    <style>
-
-        body{
-            font-family: Arial, sans-serif;
-            background:#f4f4f4;
-            margin:0;
-            padding:0;
-        }
-
-        .container{
-            max-width:1000px;
-            margin:auto;
-            padding:40px 20px;
-        }
-
-        .box{
-            background:white;
-            padding:30px;
-            border-radius:12px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        h1{
-            text-align:center;
-            margin-bottom:30px;
-        }
-
-        table{
-            width:100%;
-            border-collapse:collapse;
-        }
-
-        th, td{
-            padding:15px;
-            border-bottom:1px solid #ddd;
-            text-align:left;
-        }
-
-        th{
-            background:#007BFF;
-            color:white;
-        }
-
-        tr:hover{
-            background:#f2f2f2;
-        }
-
-        .empty{
-            text-align:center;
-            padding:20px;
-            color:#666;
-        }
-
-        .back{
-            display:block;
-            text-align:center;
-            margin-top:20px;
-            text-decoration:none;
-            color:#007BFF;
-        }
-
-    </style>
-
+    <title>Assets Requiring Update</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <div class="box">
+    <h1>Update Required</h1>
 
-            <h1>Assets Requiring Update</h1>
+    <img src="/static/logo.png" width="120">
 
-            {% if assets %}
+    <p style="margin-top:20px;">
+        These assets were last updated more than 180 days ago.
+    </p>
 
-            <table>
+    <hr style="margin:30px 0;">
 
-                <tr>
-                    <th>Asset ID</th>
-                    <th>Depot</th>
-                    <th>Status</th>
-                    <th>Last Update</th>
-                </tr>
+    {% if assets %}
 
-                {% for asset in assets %}
+        <div class="cards">
+        {% for asset in assets %}
+            <div class="card">
 
-                <tr>
-                    <td>{{ asset[1] }}</td>
-                    <td>{{ asset[2] }}</td>
-                    <td>{{ asset[3] }}</td>
-                    <td>{{ asset[7] }}</td>
-                </tr>
+                <h2>{{ asset[1] }}</h2>
 
-                {% endfor %}
+                <p><b>ID:</b> {{ asset[0] }}</p>
+                <p><b>Depot:</b> {{ asset[2] }}</p>
+                <p><b>Status:</b> {{ asset[3] }}</p>
+                <p><b>Captured By:</b> {{ asset[4] }}</p>
+                <p><b>Employee Number:</b> {{ asset[5] }}</p>
+                <p><b>Last Update:</b> {{ asset[7] }}</p>
 
-            </table>
+                {% if asset[6] %}
+                    <img src="/static/uploads/{{ asset[6] }}"
+                         style="width:150px; margin-top:10px; border-radius:8px;">
+                {% endif %}
 
-            {% else %}
+                <br><br>
 
-            <div class="empty">
-                No assets currently require updates.
+                <!-- DELETE ASSET -->
+                <button class="btn-delete"
+                        onclick="openModal('/delete/{{ asset[0] }}')">
+                    Delete Asset
+                </button>
+
+                <!-- DELETE ONLY IMAGE -->
+                {% if asset[6] %}
+                <button class="btn-image"
+                        onclick="openModal('/delete_image/{{ asset[0] }}')">
+                    Delete Image
+                </button>
+                {% endif %}
+
             </div>
-
-            {% endif %}
-
-            <a href="/" class="back">
-                ← Back to Home
-            </a>
-
+        {% endfor %}
         </div>
 
+    {% else %}
+        <p>No expired assets found.</p>
+    {% endif %}
+
+    <br><br>
+    <a href="/" class="btn">Back to Home</a>
+
+</div>
+
+<!-- =============================
+     MODAL PREMIUM (ℹ️)
+============================= -->
+<div class="modal-overlay" id="modal">
+    <div class="modal-box">
+        <div class="modal-icon">ℹ️</div>
+
+        <h2>Confirm Action</h2>
+        <p>Are you sure you want to continue?</p>
+
+        <div class="modal-buttons">
+            <button class="modal-btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="modal-btn-confirm" id="modalConfirm">Yes</button>
+        </div>
     </div>
+</div>
+
+<!-- =============================
+     UNIVERSAL MODAL SCRIPT
+============================= -->
+<script>
+    let actionURL = "";
+
+    function openModal(url) {
+        actionURL = url;
+        document.getElementById("modal").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("modal").style.display = "none";
+    }
+
+    document.getElementById("modalConfirm").onclick = function () {
+        window.location.href = actionURL;
+    };
+</script>
 
 </body>
 </html>
-```
