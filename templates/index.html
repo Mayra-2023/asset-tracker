@@ -6,109 +6,51 @@
     <title>Asset Verification</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
 
 <div class="container">
 
+    <img src="/static/logo.png" class="logo">
+
     <h1>Asset Verification</h1>
     <p>Asset registration and verification platform</p>
 
-    <img src="/static/logo.png" width="120" style="margin-bottom:20px;">
-
     <div class="cards">
 
-        <!-- ADD ASSET -->
         <div class="card">
             <h2>Add Asset</h2>
             <p>Register a new asset with photo and details.</p>
             <a href="/add" class="btn">Add Asset</a>
         </div>
 
-        <!-- SEARCH -->
         <div class="card">
             <h2>Search Asset</h2>
             <p>Search and verify asset information.</p>
             <a href="/search" class="btn">Search</a>
         </div>
 
-        <!-- UPDATES -->
         <div class="card">
             <h2>Update Required</h2>
-            <p>View assets needing updates.</p>
+            <p>View assets that require image updates.</p>
             <a href="/updates" class="btn">View List</a>
         </div>
 
-        <!-- EXPORT -->
+        <div class="card">
+            <h2>Summary</h2>
+            <p>Overview of asset verification per depot.</p>
+            <a href="/summary" class="btn">Summary</a>
+        </div>
+
         <div class="card">
             <h2>Export Data</h2>
-            <p>Download asset database (CSV).</p>
-            <a href="/export" class="btn">Export CSV</a>
-        </div>
-
-        <!-- DELETE EVERYTHING -->
-        <div class="card">
-            <h2>Danger Zone</h2>
-            <p>Delete all records, images & export file.</p>
-
-            <button class="btn-delete"
-                    onclick="openModal('/delete_all')">
-                Delete ALL ASSETS
-            </button>
-
-            <br><br>
-
-            <button class="btn-image"
-                    onclick="openModal('/delete_uploads')">
-                Delete ALL IMAGES
-            </button>
-
-            <br><br>
-
-            <button class="btn-delete"
-                    onclick="openModal('/delete_export')">
-                Delete EXPORT File
-            </button>
+            <p>Download the complete dataset in CSV format.</p>
+            <a href="/export" class="btn">Export</a>
         </div>
 
     </div>
+
 </div>
-
-<!-- ============================
-     MODAL UNIVERSAL (ℹ️)
-============================ -->
-<div class="modal-overlay" id="modal">
-    <div class="modal-box">
-        <div class="modal-icon">ℹ️</div>
-
-        <h2>Confirm Action</h2>
-        <p>Are you sure you want to continue?</p>
-
-        <div class="modal-buttons">
-            <button class="modal-btn-cancel" onclick="closeModal()">Cancel</button>
-            <button class="modal-btn-confirm" id="modalConfirm">Yes</button>
-        </div>
-    </div>
-</div>
-
-<!-- ============================
-     UNIVERSAL JAVASCRIPT
-============================ -->
-<script>
-    let actionURL = "";
-
-    function openModal(url) {
-        actionURL = url;
-        document.getElementById("modal").style.display = "flex";
-    }
-
-    function closeModal() {
-        document.getElementById("modal").style.display = "none";
-    }
-
-    document.getElementById("modalConfirm").onclick = function () {
-        window.location.href = actionURL;
-    };
-</script>
 
 </body>
 </html>
