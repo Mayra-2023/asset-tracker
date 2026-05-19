@@ -19,11 +19,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
-RENDER_URL = ""  # ← você pode colocar aqui sua URL do Render ex: https://seuapp.onrender.com
+# Coloque aqui sua URL do Render, exemplo:
+# RENDER_URL = "https://seuapp.onrender.com"
+RENDER_URL = ""
 
 
 # =========================
-# DATABASE
+# BANCO DE DADOS
 # =========================
 
 def init_db():
@@ -48,6 +50,7 @@ def init_db():
 
 
 init_db()
+
 
 # =========================
 # HOME
@@ -220,12 +223,14 @@ def export():
         ])
 
         for r in rows:
-            image_url = ""
+            # Monta URL correta da imagem
             if r[6]:
                 if RENDER_URL:
                     image_url = f"{RENDER_URL}/static/uploads/{r[6]}"
                 else:
                     image_url = f"/static/uploads/{r[6]}"
+            else:
+                image_url = ""
 
             writer.writerow([r[0], r[1], r[2], r[3], r[4], r[5], image_url, r[7]])
 
