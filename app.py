@@ -78,6 +78,9 @@ def add_asset():
         image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(image_path)
 
+        # 🔥 CRIA LINK COMPLETO (URL ABSOLUTA)
+        image_url = url_for("static", filename="uploads/" + filename, _external=True)
+
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
@@ -98,7 +101,7 @@ def add_asset():
             status,
             captured_by,
             employee_number,
-            filename,
+            image_url,   # <-- AGORA SALVA O LINK COMPLETO
             capture_date
         ))
 
@@ -212,7 +215,7 @@ def summary():
     return render_template("summary.html", summary=summary)
 
 # =========================
-# EXPORT CSV
+# EXPORT CSV (AGORA EXPORTA LINK DA IMAGEM)
 # =========================
 
 @app.route("/export")
@@ -230,7 +233,16 @@ def export():
 
     with open(filepath, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["ID", "Asset ID", "Depot", "Status", "Captured By", "Employee No", "Image", "Capture Date"])
+        writer.writerow([
+            "ID",
+            "Asset ID",
+            "Depot",
+            "Status",
+            "Captured By",
+            "Employee No",
+            "Image URL",
+            "Capture Date"
+        ])
         writer.writerows(rows)
 
     return send_file(filepath, as_attachment=True)
