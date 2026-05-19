@@ -4,150 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asset Verification</title>
-
-    <style>
-        body{
-            font-family: Arial, sans-serif;
-            background:#f4f4f4;
-            margin:0;
-            padding:0;
-        }
-
-        .logo-container{
-            text-align:center;
-            margin-top:30px;
-            margin-bottom:10px;
-        }
-
-        .logo{
-            height:120px;
-        }
-
-        .container{
-            max-width:900px;
-            margin:auto;
-            padding:20px;
-            text-align:center;
-        }
-
-        h1{
-            color:#222;
-            margin-bottom:10px;
-        }
-
-        p{
-            color:#555;
-            margin-bottom:40px;
-        }
-
-        .cards{
-            display:grid;
-            grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
-            gap:20px;
-        }
-
-        .card{
-            background:white;
-            padding:30px;
-            border-radius:12px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .card h2{
-            margin-bottom:15px;
-            color:#333;
-        }
-
-        .btn{
-            display:inline-block;
-            padding:12px 20px;
-            background:#007BFF;
-            color:white;
-            text-decoration:none;
-            border-radius:8px;
-            margin-top:15px;
-            cursor:pointer;
-        }
-
-        .btn:hover{
-            background:#0056b3;
-        }
-
-        select{
-            padding:10px;
-            border-radius:8px;
-            border:1px solid #bbb;
-            width:100%;
-        }
-    </style>
-
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-    <!-- LOGO -->
-    <div class="logo-container">
-        <img src="{{ url_for('static', filename='logo.png') }}" 
-             alt="Logo" 
-             class="logo">
-    </div>
+<div class="container">
 
-    <div class="container">
+    <h1>Asset Verification</h1>
+    <p>Asset registration and verification platform</p>
 
-        <h1>Asset Verification</h1>
+    <img src="/static/logo.png" width="120" style="margin-bottom:20px;">
 
-        <p>Asset registration and verification platform</p>
+    <div class="cards">
 
-        <div class="cards">
+        <!-- ADD ASSET -->
+        <div class="card">
+            <h2>Add Asset</h2>
+            <p>Register a new asset with photo and details.</p>
+            <a href="/add" class="btn">Add Asset</a>
+        </div>
 
-            <div class="card">
-                <h2>Add Asset</h2>
-                <p>Register a new asset with photo and details.</p>
-                <a href="/add" class="btn">Add Asset</a>
-            </div>
+        <!-- SEARCH -->
+        <div class="card">
+            <h2>Search Asset</h2>
+            <p>Search and verify asset information.</p>
+            <a href="/search" class="btn">Search</a>
+        </div>
 
-            <div class="card">
-                <h2>Search Asset</h2>
-                <p>Search and verify asset information.</p>
-                <a href="/search" class="btn">Search</a>
-            </div>
+        <!-- UPDATES -->
+        <div class="card">
+            <h2>Update Required</h2>
+            <p>View assets needing updates.</p>
+            <a href="/updates" class="btn">View List</a>
+        </div>
 
-            <div class="card">
-                <h2>Update Required</h2>
-                <p>View assets that require image updates.</p>
-                <a href="/updates" class="btn">View List</a>
-            </div>
+        <!-- EXPORT -->
+        <div class="card">
+            <h2>Export Data</h2>
+            <p>Download asset database (CSV).</p>
+            <a href="/export" class="btn">Export CSV</a>
+        </div>
 
-            <!-- EXPORT ZIP + CSV -->
-            <div class="card">
-                <h2>Export Data</h2>
-                <p>Download filtered asset data with images.</p>
+        <!-- DELETE EVERYTHING -->
+        <div class="card">
+            <h2>Danger Zone</h2>
+            <p>Delete all records, images & export file.</p>
 
-                <form action="/export" method="GET" style="display:flex; flex-direction:column; gap:12px;">
+            <button class="btn-delete"
+                    onclick="openModal('/delete_all')">
+                Delete ALL ASSETS
+            </button>
 
-                    <label><strong>Select Depot:</strong></label>
-                    <select name="depot">
-                        <option value="all">All Depots</option>
-                        <option value="Maragra">Maragra</option>
-                        <option value="Xinavane">Xinavane</option>
-                        <option value="Matola">Matola</option>
-                        <option value="Mafambisse">Mafambisse</option>
-                        <option value="Marromeu">Marromeu</option>
-                    </select>
+            <br><br>
 
-                    <label><strong>Filter:</strong></label>
-                    <select name="filter">
-                        <option value="all">All Assets</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
-                    </select>
+            <button class="btn-image"
+                    onclick="openModal('/delete_uploads')">
+                Delete ALL IMAGES
+            </button>
 
-                    <button class="btn" type="submit">Download Export</button>
-                </form>
-            </div>
+            <br><br>
 
+            <button class="btn-delete"
+                    onclick="openModal('/delete_export')">
+                Delete EXPORT File
+            </button>
         </div>
 
     </div>
+</div>
+
+<!-- ============================
+     MODAL UNIVERSAL (ℹ️)
+============================ -->
+<div class="modal-overlay" id="modal">
+    <div class="modal-box">
+        <div class="modal-icon">ℹ️</div>
+
+        <h2>Confirm Action</h2>
+        <p>Are you sure you want to continue?</p>
+
+        <div class="modal-buttons">
+            <button class="modal-btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="modal-btn-confirm" id="modalConfirm">Yes</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================
+     UNIVERSAL JAVASCRIPT
+============================ -->
+<script>
+    let actionURL = "";
+
+    function openModal(url) {
+        actionURL = url;
+        document.getElementById("modal").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("modal").style.display = "none";
+    }
+
+    document.getElementById("modalConfirm").onclick = function () {
+        window.location.href = actionURL;
+    };
+</script>
 
 </body>
 </html>
