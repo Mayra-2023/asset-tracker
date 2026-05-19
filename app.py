@@ -19,8 +19,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
-# Coloque aqui sua URL do Render, exemplo:
-# RENDER_URL = "https://seuapp.onrender.com"
+# Caso queira forçar usar sua URL do Render, coloque aqui:
+# Exemplo: RENDER_URL = "https://meusistema.onrender.com"
 RENDER_URL = ""
 
 
@@ -198,7 +198,7 @@ def summary():
 
 
 # =========================
-# EXPORT CSV
+# EXPORT CSV — COM URL DA IMAGEM CORRIGIDA
 # =========================
 
 @app.route("/export")
@@ -213,6 +213,12 @@ def export():
     rows = cursor.fetchall()
     conn.close()
 
+    # URL automática se RENDER_URL não estiver definida
+    if RENDER_URL:
+        base_url = RENDER_URL
+    else:
+        base_url = request.host_url.rstrip("/")
+
     with open(filepath, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
@@ -223,12 +229,8 @@ def export():
         ])
 
         for r in rows:
-            # Monta URL correta da imagem
             if r[6]:
-                if RENDER_URL:
-                    image_url = f"{RENDER_URL}/static/uploads/{r[6]}"
-                else:
-                    image_url = f"/static/uploads/{r[6]}"
+                image_url = f"{base_url}/static/uploads/{r[6]}"
             else:
                 image_url = ""
 
