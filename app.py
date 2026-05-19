@@ -19,8 +19,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
-# Caso queira forçar usar sua URL do Render, coloque aqui:
-# Exemplo: RENDER_URL = "https://meusistema.onrender.com"
+# URL DO SERVIDOR (Render, por exemplo)
 RENDER_URL = ""
 
 
@@ -198,7 +197,7 @@ def summary():
 
 
 # =========================
-# EXPORT CSV — COM URL DA IMAGEM CORRIGIDA
+# EXPORT CSV
 # =========================
 
 @app.route("/export")
@@ -213,12 +212,6 @@ def export():
     rows = cursor.fetchall()
     conn.close()
 
-    # URL automática se RENDER_URL não estiver definida
-    if RENDER_URL:
-        base_url = RENDER_URL
-    else:
-        base_url = request.host_url.rstrip("/")
-
     with open(filepath, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
@@ -230,86 +223,16 @@ def export():
 
         for r in rows:
             if r[6]:
-                image_url = f"{base_url}/static/uploads/{r[6]}"
+                if RENDER_URL:
+                    image_url = f"{RENDER_URL}/static/uploads/{r[6]}"
+                else:
+                    image_url = f"/static/uploads/{r[6]}"
             else:
                 image_url = ""
 
             writer.writerow([r[0], r[1], r[2], r[3], r[4], r[5], image_url, r[7]])
 
     return send_file(filepath, as_attachment=True)
-
-
-# =========================
-# DELETE ROUTES
-# =========================
-
-@app.route("/delete/<int:id>")
-def delete_asset(id):
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT image FROM assets WHERE id = ?", (id,))
-    result = cursor.fetchone()
-
-    if result and result[0]:
-        image_path = os.path.join(UPLOAD_FOLDER, result[0])
-        if os.path.exists(image_path):
-            os.remove(image_path)
-
-    cursor.execute("DELETE FROM assets WHERE id = ?", (id,))
-    conn.commit()
-    conn.close()
-
-    return redirect(url_for("index"))
-
-
-@app.route("/delete_image/<int:id>")
-def delete_image(id):
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT image FROM assets WHERE id = ?", (id,))
-    result = cursor.fetchone()
-
-    if result and result[0]:
-        image_path = os.path.join(UPLOAD_FOLDER, result[0])
-        if os.path.exists(image_path):
-            os.remove(image_path)
-
-        cursor.execute("UPDATE assets SET image='' WHERE id=?", (id,))
-        conn.commit()
-
-    conn.close()
-    return redirect(url_for("index"))
-
-
-@app.route("/delete_all")
-def delete_all():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM assets")
-    conn.commit()
-    conn.close()
-    return redirect(url_for("index"))
-
-
-@app.route("/delete_uploads")
-def delete_uploads():
-    for f in os.listdir(UPLOAD_FOLDER):
-        path = os.path.join(UPLOAD_FOLDER, f)
-        if os.path.isfile(path):
-            os.remove(path)
-
-    return redirect(url_for("index"))
-
-
-@app.route("/delete_export")
-def delete_export():
-    file_path = os.path.join(BASE_DIR, "assets_export.csv")
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    return redirect(url_for("index"))
 
 
 # =========================
