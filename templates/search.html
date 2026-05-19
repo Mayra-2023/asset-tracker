@@ -41,21 +41,6 @@
             <p><i>No image available</i></p>
         {% endif %}
 
-        <br><br>
-
-        <!-- Buttons -->
-        <button class="btn-delete"
-                onclick="openModal('/delete/{{ asset[0] }}')">
-            Delete Asset
-        </button>
-
-        {% if asset[6] %}
-        <button class="btn-image"
-                onclick="openModal('/delete_image/{{ asset[0] }}')">
-            Delete Image
-        </button>
-        {% endif %}
-
         {% if update_required %}
             <p style="margin-top:20px; color:red;">
                 ⚠️ This asset requires an image update.
@@ -70,43 +55,6 @@
     <a href="/" class="btn">Back to Home</a>
 
 </div>
-
-<!-- =============================
-     MODAL PREMIUM (ℹ️)
-============================= -->
-<div class="modal-overlay" id="modal">
-    <div class="modal-box">
-        <div class="modal-icon">ℹ️</div>
-
-        <h2>Confirm Action</h2>
-        <p>Are you sure you want to continue?</p>
-
-        <div class="modal-buttons">
-            <button class="modal-btn-cancel" onclick="closeModal()">Cancel</button>
-            <button class="modal-btn-confirm" id="modalConfirm">Yes</button>
-        </div>
-    </div>
-</div>
-
-<!-- =============================
-     UNIVERSAL MODAL SCRIPT
-============================= -->
-<script>
-    let actionURL = "";
-
-    function openModal(url) {
-        actionURL = url;
-        document.getElementById("modal").style.display = "flex";
-    }
-
-    function closeModal() {
-        document.getElementById("modal").style.display = "none";
-    }
-
-    document.getElementById("modalConfirm").onclick = function () {
-        window.location.href = actionURL;
-    };
-</script>
 
 </body>
 </html>
