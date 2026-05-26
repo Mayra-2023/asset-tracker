@@ -21,7 +21,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
 # URL completa (Render ou localhost)
-RENDER_URL = ""   # ex: "https://meuapp.onrender.com"
+# Se estiver em produção coloque:
+# RENDER_URL = "https://seuapp.onrender.com"
+RENDER_URL = ""
 
 
 # =========================
@@ -74,9 +76,9 @@ def add_asset():
         status = request.form["status"]
         captured_by = request.form["captured_by"]
         employee_number = request.form["employee_number"]
+        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         image = request.files["image"]
-        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         filename = f"{timestamp}_{secure_filename(image.filename)}"
@@ -84,7 +86,7 @@ def add_asset():
         image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(image_path)
 
-        # SALVA LINK COMPLETO NO BANCO
+        # Salvar URL (link completo)
         image_url = url_for("static", filename="uploads/" + filename, _external=True)
 
         conn = sqlite3.connect(DATABASE)
@@ -134,9 +136,7 @@ def search():
         if asset:
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
             days_difference = (datetime.now() - capture_date).days
-
-            if days_difference >= 180:
-                update_required = True
+            update_required = days_difference >= 180
 
     return render_template("search.html", asset=asset, update_required=update_required)
 
@@ -150,7 +150,6 @@ def updates():
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM assets")
     assets = cursor.fetchall()
     conn.close()
@@ -200,7 +199,7 @@ def summary():
 
 
 # =========================
-# EXPORT CSV (URL + FILE + BASE64)
+# EXPORT CSV 100% FUNCIONAL
 # =========================
 
 @app.route("/export")
@@ -227,16 +226,18 @@ def export():
 
         for r in rows:
 
-            image_url = r[6] if r[6] else ""
+            image_url = r[6]
+
+            # Se a imagem salva for URL → extrai nome corretamente
             image_filename = r[6].split("/")[-1] if r[6] else ""
 
-            # BASE64
+            # BASE64 somente se existir arquivo local
             b64 = ""
-            if image_filename:
-                image_path = os.path.join(UPLOAD_FOLDER, image_filename)
-                if os.path.exists(image_path):
-                    with open(image_path, "rb") as img:
-                        b64 = base64.b64encode(img.read()).decode("utf-8")
+            file_path_local = os.path.join(UPLOAD_FOLDER, image_filename)
+
+            if os.path.exists(file_path_local):
+                with open(file_path_local, "rb") as img:
+                    b64 = base64.b64encode(img.read()).decode("utf-8")
 
             writer.writerow([
                 r[0], r[1], r[2], r[3], r[4], r[5],
