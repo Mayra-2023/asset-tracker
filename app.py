@@ -20,10 +20,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
-# URL completa (Render ou localhost)
-# Se estiver em produção coloque:
-# RENDER_URL = "https://seuapp.onrender.com"
-RENDER_URL = ""
+# URL DO SERVIDOR (preencha quando publicar no Render)
+RENDER_URL = ""   # Exemplo: "https://seuapp.onrender.com"
 
 
 # =========================
@@ -76,18 +74,15 @@ def add_asset():
         status = request.form["status"]
         captured_by = request.form["captured_by"]
         employee_number = request.form["employee_number"]
-        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         image = request.files["image"]
+        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         filename = f"{timestamp}_{secure_filename(image.filename)}"
 
         image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(image_path)
-
-        # Salvar URL (link completo)
-        image_url = url_for("static", filename="uploads/" + filename, _external=True)
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -97,7 +92,7 @@ def add_asset():
                 asset_id, depot, status, captured_by, employee_number, image, capture_date
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (asset_id, depot, status, captured_by, employee_number, image_url, capture_date))
+        """, (asset_id, depot, status, captured_by, employee_number, filename, capture_date))
 
         conn.commit()
         conn.close()
@@ -136,7 +131,9 @@ def search():
         if asset:
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
             days_difference = (datetime.now() - capture_date).days
-            update_required = days_difference >= 180
+
+            if days_difference >= 180:
+                update_required = True
 
     return render_template("search.html", asset=asset, update_required=update_required)
 
@@ -150,6 +147,7 @@ def updates():
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
+
     cursor.execute("SELECT * FROM assets")
     assets = cursor.fetchall()
     conn.close()
@@ -199,7 +197,7 @@ def summary():
 
 
 # =========================
-# EXPORT CSV 100% FUNCIONAL
+# EXPORT CSV (LINK + BASE64)
 # =========================
 
 @app.route("/export")
@@ -220,28 +218,43 @@ def export():
         writer.writerow([
             "ID", "Asset ID", "Depot", "Status",
             "Captured By", "Employee No",
-            "Image URL", "Image File", "Image Base64",
+            "Image URL (Local Path)",
+            "Image Base64",
             "Capture Date"
         ])
 
         for r in rows:
 
-            image_url = r[6]
+            # ---------------------------
+            # URL LOCAL DA IMAGEM
+            # ---------------------------
+            if r[6]:
+                if RENDER_URL:
+                    image_url = f"{RENDER_URL}/static/uploads/{r[6]}"
+                else:
+                    image_url = f"/static/uploads/{r[6]}"
+            else:
+                image_url = ""
 
-            # Se a imagem salva for URL → extrai nome corretamente
-            image_filename = r[6].split("/")[-1] if r[6] else ""
+            # ---------------------------
+            # IMAGEM EM BASE64
+            # ---------------------------
+            if r[6]:
+                image_path = os.path.join(UPLOAD_FOLDER, r[6])
 
-            # BASE64 somente se existir arquivo local
-            b64 = ""
-            file_path_local = os.path.join(UPLOAD_FOLDER, image_filename)
-
-            if os.path.exists(file_path_local):
-                with open(file_path_local, "rb") as img:
-                    b64 = base64.b64encode(img.read()).decode("utf-8")
+                if os.path.exists(image_path):
+                    with open(image_path, "rb") as img:
+                        b64 = base64.b64encode(img.read()).decode("utf-8")
+                    image_b64 = f"data:image/jpeg;base64,{b64}"
+                else:
+                    image_b64 = ""
+            else:
+                image_b64 = ""
 
             writer.writerow([
                 r[0], r[1], r[2], r[3], r[4], r[5],
-                image_url, image_filename, b64,
+                image_url,
+                image_b64,
                 r[7]
             ])
 
