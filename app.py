@@ -8,9 +8,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# =========================
+# =====================================================
 # CONFIGURAÇÕES
-# =========================
+# =====================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join("static", "uploads")
@@ -20,13 +20,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
-# URL DO SERVIDOR (preencha quando publicar no Render)
-RENDER_URL = ""   # Exemplo: "https://seuapp.onrender.com"
+# Se publicar no Render:
+# RENDER_URL = "https://seuapp.onrender.com"
+RENDER_URL = ""
 
 
-# =========================
+# =====================================================
 # BANCO DE DADOS
-# =========================
+# =====================================================
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -51,18 +52,18 @@ def init_db():
 init_db()
 
 
-# =========================
+# =====================================================
 # HOME
-# =========================
+# =====================================================
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-# =========================
+# =====================================================
 # ADD ASSET
-# =========================
+# =====================================================
 
 @app.route("/add", methods=["GET", "POST"])
 def add_asset():
@@ -74,25 +75,29 @@ def add_asset():
         status = request.form["status"]
         captured_by = request.form["captured_by"]
         employee_number = request.form["employee_number"]
+        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         image = request.files["image"]
-        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         filename = f"{timestamp}_{secure_filename(image.filename)}"
-
         image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(image_path)
+
+        # URL COMPLETA DA IMAGEM
+        image_url = url_for("static", filename="uploads/" + filename, _external=True)
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
         cursor.execute("""
             INSERT INTO assets (
-                asset_id, depot, status, captured_by, employee_number, image, capture_date
+                asset_id, depot, status, captured_by,
+                employee_number, image, capture_date
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (asset_id, depot, status, captured_by, employee_number, filename, capture_date))
+        """, (asset_id, depot, status, captured_by,
+              employee_number, image_url, capture_date))
 
         conn.commit()
         conn.close()
@@ -102,9 +107,9 @@ def add_asset():
     return render_template("add_asset.html")
 
 
-# =========================
+# =====================================================
 # SEARCH
-# =========================
+# =====================================================
 
 @app.route("/search", methods=["GET", "POST"])
 def search():
@@ -130,43 +135,39 @@ def search():
 
         if asset:
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
-            days_difference = (datetime.now() - capture_date).days
+            update_required = (datetime.now() - capture_date).days >= 180
 
-            if days_difference >= 180:
-                update_required = True
+    return render_template("search.html",
+                           asset=asset,
+                           update_required=update_required)
 
-    return render_template("search.html", asset=asset, update_required=update_required)
 
-
-# =========================
+# =====================================================
 # UPDATES
-# =========================
+# =====================================================
 
 @app.route("/updates")
 def updates():
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM assets")
     assets = cursor.fetchall()
     conn.close()
 
-    expired_assets = []
+    expired = []
 
     for asset in assets:
         capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
-        days_difference = (datetime.now() - capture_date).days
+        if (datetime.now() - capture_date).days >= 180:
+            expired.append(asset)
 
-        if days_difference >= 180:
-            expired_assets.append(asset)
-
-    return render_template("updates.html", assets=expired_assets)
+    return render_template("updates.html", assets=expired)
 
 
-# =========================
+# =====================================================
 # SUMMARY
-# =========================
+# =====================================================
 
 @app.route("/summary")
 def summary():
@@ -182,7 +183,11 @@ def summary():
     for depot, asset_id, capture_date in rows:
 
         if depot not in summary:
-            summary[depot] = {"total": 0, "verificados": 0, "nao_verificados": 0}
+            summary[depot] = {
+                "total": 0,
+                "verificados": 0,
+                "nao_verificados": 0
+            }
 
         summary[depot]["total"] += 1
 
@@ -196,9 +201,9 @@ def summary():
     return render_template("summary.html", summary=summary)
 
 
-# =========================
-# EXPORT CSV (LINK + BASE64)
-# =========================
+# =====================================================
+# EXPORT CSV – CONSISTENTE (URL + FILE + BASE64)
+# =====================================================
 
 @app.route("/export")
 def export():
@@ -218,52 +223,37 @@ def export():
         writer.writerow([
             "ID", "Asset ID", "Depot", "Status",
             "Captured By", "Employee No",
-            "Image URL (Local Path)",
-            "Image Base64",
+            "Image URL", "Image File", "Image Base64",
             "Capture Date"
         ])
 
         for r in rows:
 
-            # ---------------------------
-            # URL LOCAL DA IMAGEM
-            # ---------------------------
-            if r[6]:
-                if RENDER_URL:
-                    image_url = f"{RENDER_URL}/static/uploads/{r[6]}"
-                else:
-                    image_url = f"/static/uploads/{r[6]}"
-            else:
-                image_url = ""
+            image_url = r[6]
 
-            # ---------------------------
-            # IMAGEM EM BASE64
-            # ---------------------------
-            if r[6]:
-                image_path = os.path.join(UPLOAD_FOLDER, r[6])
+            # nome do arquivo extraído da URL
+            image_filename = image_url.split("/")[-1] if image_url else ""
 
-                if os.path.exists(image_path):
-                    with open(image_path, "rb") as img:
-                        b64 = base64.b64encode(img.read()).decode("utf-8")
-                    image_b64 = f"data:image/jpeg;base64,{b64}"
-                else:
-                    image_b64 = ""
-            else:
-                image_b64 = ""
+            # base64 somente se arquivo existir no servidor
+            b64 = ""
+            local_path = os.path.join(UPLOAD_FOLDER, image_filename)
+
+            if os.path.exists(local_path):
+                with open(local_path, "rb") as img:
+                    b64 = base64.b64encode(img.read()).decode("utf-8")
 
             writer.writerow([
                 r[0], r[1], r[2], r[3], r[4], r[5],
-                image_url,
-                image_b64,
+                image_url, image_filename, b64,
                 r[7]
             ])
 
     return send_file(filepath, as_attachment=True)
 
 
-# =========================
+# =====================================================
 # RUN
-# =========================
+# =====================================================
 
 if __name__ == "__main__":
     app.run(debug=True)
