@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import sqlite3
 import os
 import csv
+import base64
 from datetime import datetime
 
 app = Flask(__name__)
@@ -11,16 +12,20 @@ app = Flask(__name__)
 # CONFIGURAÇÕES
 # =========================
 
-UPLOAD_FOLDER = "static/uploads"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join("static", "uploads")
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# CAMINHO ABSOLUTO DO BANCO
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "assets.db")
 
+# URL completa (Render ou localhost)
+RENDER_URL = ""   # ex: "https://meuapp.onrender.com"
+
+
 # =========================
-# DATABASE
+# BANCO DE DADOS
 # =========================
 
 def init_db():
@@ -45,6 +50,7 @@ def init_db():
 
 init_db()
 
+
 # =========================
 # HOME
 # =========================
@@ -52,6 +58,7 @@ init_db()
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 # =========================
 # ADD ASSET
@@ -71,14 +78,13 @@ def add_asset():
         image = request.files["image"]
         capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # GERAR NOME ÚNICO
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         filename = f"{timestamp}_{secure_filename(image.filename)}"
 
         image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(image_path)
 
-        # 🔥 CRIA LINK COMPLETO (URL ABSOLUTA)
+        # SALVA LINK COMPLETO NO BANCO
         image_url = url_for("static", filename="uploads/" + filename, _external=True)
 
         conn = sqlite3.connect(DATABASE)
@@ -86,24 +92,10 @@ def add_asset():
 
         cursor.execute("""
             INSERT INTO assets (
-                asset_id,
-                depot,
-                status,
-                captured_by,
-                employee_number,
-                image,
-                capture_date
+                asset_id, depot, status, captured_by, employee_number, image, capture_date
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            asset_id,
-            depot,
-            status,
-            captured_by,
-            employee_number,
-            image_url,   # <-- AGORA SALVA O LINK COMPLETO
-            capture_date
-        ))
+        """, (asset_id, depot, status, captured_by, employee_number, image_url, capture_date))
 
         conn.commit()
         conn.close()
@@ -111,6 +103,7 @@ def add_asset():
         return redirect(url_for("index"))
 
     return render_template("add_asset.html")
+
 
 # =========================
 # SEARCH
@@ -142,17 +135,14 @@ def search():
             capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
             days_difference = (datetime.now() - capture_date).days
 
-            if days_difference >= 180:  # Semestral
+            if days_difference >= 180:
                 update_required = True
 
-    return render_template(
-        "search.html",
-        asset=asset,
-        update_required=update_required
-    )
+    return render_template("search.html", asset=asset, update_required=update_required)
+
 
 # =========================
-# UPDATE REQUIRED LIST
+# UPDATES
 # =========================
 
 @app.route("/updates")
@@ -174,13 +164,11 @@ def updates():
         if days_difference >= 180:
             expired_assets.append(asset)
 
-    return render_template(
-        "updates.html",
-        assets=expired_assets
-    )
+    return render_template("updates.html", assets=expired_assets)
+
 
 # =========================
-# SUMMARY (RESUMO POR DEPÓSITO)
+# SUMMARY
 # =========================
 
 @app.route("/summary")
@@ -188,7 +176,6 @@ def summary():
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-
     cursor.execute("SELECT depot, asset_id, capture_date FROM assets")
     rows = cursor.fetchall()
     conn.close()
@@ -196,12 +183,9 @@ def summary():
     summary = {}
 
     for depot, asset_id, capture_date in rows:
+
         if depot not in summary:
-            summary[depot] = {
-                "total": 0,
-                "verificados": 0,
-                "nao_verificados": 0
-            }
+            summary[depot] = {"total": 0, "verificados": 0, "nao_verificados": 0}
 
         summary[depot]["total"] += 1
 
@@ -214,8 +198,9 @@ def summary():
 
     return render_template("summary.html", summary=summary)
 
+
 # =========================
-# EXPORT CSV (AGORA EXPORTA LINK DA IMAGEM)
+# EXPORT CSV (URL + FILE + BASE64)
 # =========================
 
 @app.route("/export")
@@ -226,26 +211,41 @@ def export():
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM assets")
     rows = cursor.fetchall()
     conn.close()
 
     with open(filepath, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
+
         writer.writerow([
-            "ID",
-            "Asset ID",
-            "Depot",
-            "Status",
-            "Captured By",
-            "Employee No",
-            "Image URL",
+            "ID", "Asset ID", "Depot", "Status",
+            "Captured By", "Employee No",
+            "Image URL", "Image File", "Image Base64",
             "Capture Date"
         ])
-        writer.writerows(rows)
+
+        for r in rows:
+
+            image_url = r[6] if r[6] else ""
+            image_filename = r[6].split("/")[-1] if r[6] else ""
+
+            # BASE64
+            b64 = ""
+            if image_filename:
+                image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+                if os.path.exists(image_path):
+                    with open(image_path, "rb") as img:
+                        b64 = base64.b64encode(img.read()).decode("utf-8")
+
+            writer.writerow([
+                r[0], r[1], r[2], r[3], r[4], r[5],
+                image_url, image_filename, b64,
+                r[7]
+            ])
 
     return send_file(filepath, as_attachment=True)
+
 
 # =========================
 # RUN
