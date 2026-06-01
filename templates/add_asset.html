@@ -96,11 +96,16 @@
                 </select>
 
                 <label>Status</label>
-                <select name="status" required>
-                    <option value="">Select Status</option>
-                    <option value="In Use">In Use</option>
-                    <option value="Not In Use">Not In Use</option>
-                </select>
+<select name="status" required>
+    <option value="">Select Status</option>
+
+    <option value="Active">Active</option>
+    <option value="Standby">Standby</option>
+    <option value="Under Maintenance">Under Maintenance</option>
+    <option value="Damaged">Damaged</option>
+    <option value="Missing">Missing</option>
+    <option value="Disposed">Disposed</option>
+</select>
 
                 <label>Captured By</label>
                 <input type="text" name="captured_by" required>
