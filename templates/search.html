@@ -1,60 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Asset</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
+@app.route("/search", methods=["GET", "POST"])
+def search():
 
-<div class="container">
+    asset = None
+    update_required = False
+    verification_status = None
 
-    <h1>Search Asset</h1>
+    if request.method == "POST":
 
-    <img src="/static/logo.png" width="120">
+        asset_id = request.form["asset_id"]
 
-    <form method="POST" style="margin-top: 25px;">
-        <input type="text" name="asset_id" placeholder="Enter Asset ID" required
-               style="padding:10px; width:250px;">
-        <button class="btn">Search</button>
-    </form>
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
 
-    <hr style="margin:40px 0;">
+        cursor.execute("""
+            SELECT * FROM assets
+            WHERE asset_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+        """, (asset_id,))
 
-    {% if asset %}
+        asset = cursor.fetchone()
 
-        <h2>Asset Information</h2>
+        conn.close()
 
-        <p><b>ID:</b> {{ asset[0] }}</p>
-        <p><b>Asset ID:</b> {{ asset[1] }}</p>
-        <p><b>Depot:</b> {{ asset[2] }}</p>
-        <p><b>Status:</b> {{ asset[3] }}</p>
-        <p><b>Captured By:</b> {{ asset[4] }}</p>
-        <p><b>Employee Number:</b> {{ asset[5] }}</p>
-        <p><b>Capture Date:</b> {{ asset[7] }}</p>
+        if asset:
 
-        {% if asset[6] %}
-            <img src="/static/uploads/{{ asset[6] }}" 
-                 style="width:200px; margin-top:20px; border-radius:10px;">
-        {% else %}
-            <p><i>No image available</i></p>
-        {% endif %}
+            status = asset[3]
 
-        {% if update_required %}
-            <p style="margin-top:20px; color:red;">
-                ⚠️ This asset requires an image update.
-            </p>
-        {% endif %}
+            capture_date = datetime.strptime(
+                asset[7],
+                "%Y-%m-%d %H:%M:%S"
+            )
 
-    {% elif asset is not none %}
-        <p style="color:red; font-weight:bold;">No asset found.</p>
-    {% endif %}
+            days_difference = (
+                datetime.now() - capture_date
+            ).days
 
-    <br><br>
-    <a href="/" class="btn">Back to Home</a>
+            # LÓGICA DE VERIFICAÇÃO
 
-</div>
+            if status == "Missing":
+                verification_status = "Missing"
 
-</body>
-</html>
+            elif days_difference <= 180:
+                verification_status = "Verified"
+
+            else:
+                verification_status = "Overdue"
+                update_required = True
+
+    return render_template(
+        "search.html",
+        asset=asset,
+        update_required=update_required,
+        verification_status=verification_status
+    )
