@@ -30,6 +30,7 @@
         h1{
             text-align:center;
             margin-bottom:30px;
+            color:#222;
         }
 
         label{
@@ -39,11 +40,13 @@
             font-weight:bold;
         }
 
-        input, select{
+        input,
+        select{
             width:100%;
             padding:12px;
             border:1px solid #ccc;
             border-radius:8px;
+            box-sizing:border-box;
         }
 
         .btn{
@@ -70,6 +73,10 @@
             color:#007BFF;
         }
 
+        .back:hover{
+            text-decoration:underline;
+        }
+
     </style>
 
 </head>
@@ -89,6 +96,7 @@
                 <label>Depot</label>
                 <select name="depot" required>
                     <option value="">Select Depot</option>
+                    <option value="Maragra">Maragra</option>
                     <option value="Xinavane">Xinavane</option>
                     <option value="Mafambisse">Mafambisse</option>
                     <option value="Marromeu">Marromeu</option>
@@ -96,16 +104,16 @@
                 </select>
 
                 <label>Status</label>
-<select name="status" required>
-    <option value="">Select Status</option>
+                <select name="status" required>
+                    <option value="">Select Status</option>
 
-    <option value="Active">Active</option>
-    <option value="Standby">Standby</option>
-    <option value="Under Maintenance">Under Maintenance</option>
-    <option value="Damaged">Damaged</option>
-    <option value="Missing">Missing</option>
-    <option value="Disposed">Disposed</option>
-</select>
+                    <option value="Active">Active</option>
+                    <option value="Standby">Standby</option>
+                    <option value="Under Maintenance">Under Maintenance</option>
+                    <option value="Damaged">Damaged</option>
+                    <option value="Missing">Missing</option>
+                    <option value="Disposed">Disposed</option>
+                </select>
 
                 <label>Captured By</label>
                 <input type="text" name="captured_by" required>
@@ -114,8 +122,8 @@
                 <input type="text" name="employee_number" required>
 
                 <label>Upload Photo</label>
-                <input 
-                    type="file" 
+                <input
+                    type="file"
                     name="image"
                     accept="image/*"
                     capture="environment"
@@ -138,4 +146,3 @@
 
 </body>
 </html>
-```
