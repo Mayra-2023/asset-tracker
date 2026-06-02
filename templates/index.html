@@ -3,49 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Verification</title>
+    <title>Asset Verification System</title>
+
     <link rel="stylesheet" href="/static/style.css">
+
 </head>
 
 <body>
 
 <div class="container">
 
-    <img src="/static/logo.png" class="logo">
+    <img src="/static/logo.png" class="logo" alt="Company Logo">
 
-    <h1>Asset Verification</h1>
-    <p>Asset registration and verification platform</p>
+    <h1>Asset Verification System</h1>
+
+    <p>
+        Asset registration, verification and tracking platform.
+    </p>
 
     <div class="cards">
 
         <div class="card">
             <h2>Add Asset</h2>
-            <p>Register a new asset with photo and details.</p>
+            <p>
+                Register a new asset with photo,
+                description and verification details.
+            </p>
             <a href="/add" class="btn">Add Asset</a>
         </div>
 
         <div class="card">
             <h2>Search Asset</h2>
-            <p>Search and verify asset information.</p>
-            <a href="/search" class="btn">Search</a>
+            <p>
+                Search asset records and verify
+                current status and photo.
+            </p>
+            <a href="/search" class="btn">Search Asset</a>
         </div>
 
         <div class="card">
             <h2>Update Required</h2>
-            <p>View assets that require image updates.</p>
-            <a href="/updates" class="btn">View List</a>
+            <p>
+                View assets requiring
+                annual verification updates.
+            </p>
+            <a href="/updates" class="btn">View Assets</a>
         </div>
 
         <div class="card">
-            <h2>Summary</h2>
-            <p>Overview of asset verification per depot.</p>
-            <a href="/summary" class="btn">Summary</a>
+            <h2>Summary Dashboard</h2>
+            <p>
+                View verification statistics
+                by depot and status.
+            </p>
+            <a href="/summary" class="btn">Open Summary</a>
         </div>
 
         <div class="card">
             <h2>Export Data</h2>
-            <p>Download the complete dataset in CSV format.</p>
-            <a href="/export" class="btn">Export</a>
+            <p>
+                Download asset records,
+                photos links and verification status.
+            </p>
+            <a href="/export" class="btn">Export CSV</a>
         </div>
 
     </div>
