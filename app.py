@@ -1,219 +1,70 @@
-from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
-import os
-from datetime import datetime
-
-import cloudinary
-import cloudinary.uploader
+import hashlib
+import time
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 # =========================
-# CLOUDINARY
+# 🔐 CONFIGURAÇÕES
 # =========================
-
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
-)
+API_KEY = "your_api_key"
+API_SECRET = "your_api_secret"
+CLOUD_NAME = "your_cloud_name"
 
 # =========================
-# CONFIG
+# 🔧 ROTA PARA GERAR SIGNATURE
 # =========================
+@app.route("/signature", methods=["GET"])
+def generate_signature():
+    try:
+        # ✅ Timestamp obrigatório
+        timestamp = int(time.time())
 
-DATABASE = "assets.db"
+        # ✅ Parâmetros corretos
+        params = {
+            "folder": "asset_tracker",
+            "timestamp": timestamp
+        }
 
-# =========================
-# DATABASE
-# =========================
-
-def init_db():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS assets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            asset_id TEXT,
-            depot TEXT,
-            status TEXT,
-            captured_by TEXT,
-            employee_number TEXT,
-            image TEXT,
-            capture_date TEXT
+        # ✅ Ordenação obrigatória
+        sorted_params = "&".join(
+            f"{key}={value}" for key, value in sorted(params.items())
         )
-    """)
 
-    conn.commit()
-    conn.close()
+        # ✅ String final correta (SEM ERROS)
+        string_to_sign = f"{sorted_params}{API_SECRET}"
 
-init_db()
+        # Debug (opcional)
+        print("String to sign:", string_to_sign)
+
+        # ✅ Gerar assinatura SHA1
+        signature = hashlib.sha1(
+            string_to_sign.encode("utf-8")
+        ).hexdigest()
+
+        # ✅ Resposta para o frontend
+        return jsonify({
+            "signature": signature,
+            "timestamp": timestamp,
+            "api_key": API_KEY,
+            "cloud_name": CLOUD_NAME,
+            "folder": "asset_tracker"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # =========================
-# HOME
+# ✅ ROTA DE TESTE
 # =========================
-
 @app.route("/")
-def index():
-    return render_template("index.html")
+def home():
+    return "API de assinatura Cloudinary rodando ✅"
+
 
 # =========================
-# ADD ASSET
+# ▶️ EXECUÇÃO
 # =========================
-
-@app.route("/add", methods=["GET", "POST"])
-def add_asset():
-
-    if request.method == "POST":
-
-        try:
-
-            asset_id = request.form.get("asset_id")
-            depot = request.form.get("depot")
-            status = request.form.get("status")
-            captured_by = request.form.get("captured_by")
-            employee_number = request.form.get("employee_number")
-
-            image = request.files.get("image")
-
-            if not image:
-                return "No image selected", 400
-
-            capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            # Upload para Cloudinary
-            upload_result = cloudinary.uploader.upload(
-                image,
-                folder="asset_tracker"
-            )
-
-            image_url = upload_result["secure_url"]
-
-            conn = sqlite3.connect(DATABASE)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO assets (
-                    asset_id,
-                    depot,
-                    status,
-                    captured_by,
-                    employee_number,
-                    image,
-                    capture_date
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                asset_id,
-                depot,
-                status,
-                captured_by,
-                employee_number,
-                image_url,
-                capture_date
-            ))
-
-            conn.commit()
-            conn.close()
-
-            return redirect(url_for("index"))
-
-        except Exception as e:
-            print("ERROR ADD ASSET:", str(e))
-            return f"Error uploading asset: {str(e)}", 500
-
-    return render_template("add_asset.html")
-
-# =========================
-# SEARCH
-# =========================
-
-@app.route("/search", methods=["GET", "POST"])
-def search():
-
-    asset = None
-    update_required = False
-
-    if request.method == "POST":
-
-        asset_id = request.form["asset_id"]
-
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT *
-            FROM assets
-            WHERE asset_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-        """, (asset_id,))
-
-        asset = cursor.fetchone()
-
-        conn.close()
-
-        if asset:
-
-            capture_date = datetime.strptime(
-                asset[7],
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            days_difference = (
-                datetime.now() - capture_date
-            ).days
-
-            if days_difference >= 365:
-                update_required = True
-
-    return render_template(
-        "search.html",
-        asset=asset,
-        update_required=update_required
-    )
-
-# =========================
-# UPDATE REQUIRED LIST
-# =========================
-
-@app.route("/updates")
-def updates():
-
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM assets")
-
-    assets = cursor.fetchall()
-
-    conn.close()
-
-    expired_assets = []
-
-    for asset in assets:
-
-        capture_date = datetime.strptime(
-            asset[7],
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-        days_difference = (
-            datetime.now() - capture_date
-        ).days
-
-        if days_difference >= 365:
-            expired_assets.append(asset)
-
-    return render_template(
-        "updates.html",
-        assets=expired_assets
-    )
-
-# =========================
-# RUN
-# =========================
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
