@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for
-from werkzeug.utils import secure_filename
 import sqlite3
 import os
 from datetime import datetime
@@ -68,52 +67,61 @@ def add_asset():
 
     if request.method == "POST":
 
-        asset_id = request.form["asset_id"]
-        depot = request.form["depot"]
-        status = request.form["status"]
-        captured_by = request.form["captured_by"]
-        employee_number = request.form["employee_number"]
+        try:
 
-        image = request.files["image"]
+            asset_id = request.form.get("asset_id")
+            depot = request.form.get("depot")
+            status = request.form.get("status")
+            captured_by = request.form.get("captured_by")
+            employee_number = request.form.get("employee_number")
 
-        capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            image = request.files.get("image")
 
-        # Upload para Cloudinary
-        upload_result = cloudinary.uploader.upload(
-            image,
-            folder="asset_tracker"
-        )
+            if not image:
+                return "No image selected", 400
 
-        image_url = upload_result["secure_url"]
+            capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
+            # Upload para Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                image,
+                folder="asset_tracker"
+            )
 
-        cursor.execute("""
-            INSERT INTO assets (
+            image_url = upload_result["secure_url"]
+
+            conn = sqlite3.connect(DATABASE)
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT INTO assets (
+                    asset_id,
+                    depot,
+                    status,
+                    captured_by,
+                    employee_number,
+                    image,
+                    capture_date
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
                 asset_id,
                 depot,
                 status,
                 captured_by,
                 employee_number,
-                image,
+                image_url,
                 capture_date
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            asset_id,
-            depot,
-            status,
-            captured_by,
-            employee_number,
-            image_url,
-            capture_date
-        ))
+            ))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
+            conn.close()
 
-        return redirect(url_for("index"))
+            return redirect(url_for("index"))
+
+        except Exception as e:
+            print("ERROR ADD ASSET:", str(e))
+            return f"Error uploading asset: {str(e)}", 500
 
     return render_template("add_asset.html")
 
@@ -135,7 +143,8 @@ def search():
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT * FROM assets
+            SELECT *
+            FROM assets
             WHERE asset_id = ?
             ORDER BY id DESC
             LIMIT 1
