@@ -41,12 +41,18 @@
         }
 
         input,
-        select{
+        select,
+        textarea{
             width:100%;
             padding:12px;
             border:1px solid #ccc;
             border-radius:8px;
             box-sizing:border-box;
+        }
+
+        textarea{
+            resize:vertical;
+            min-height:100px;
         }
 
         .btn{
@@ -106,7 +112,6 @@
                 <label>Status</label>
                 <select name="status" required>
                     <option value="">Select Status</option>
-
                     <option value="Active">Active</option>
                     <option value="Standby">Standby</option>
                     <option value="Under Maintenance">Under Maintenance</option>
@@ -114,6 +119,12 @@
                     <option value="Missing">Missing</option>
                     <option value="Disposed">Disposed</option>
                 </select>
+
+                <label>Asset Description</label>
+                <textarea
+                    name="description"
+                    placeholder="Describe the asset, model, serial number, condition, location, etc."
+                ></textarea>
 
                 <label>Captured By</label>
                 <input type="text" name="captured_by" required>
