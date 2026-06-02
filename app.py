@@ -4,16 +4,24 @@ import sqlite3
 import os
 from datetime import datetime
 
+import cloudinary
+import cloudinary.uploader
+
 app = Flask(__name__)
+
+# =========================
+# CLOUDINARY
+# =========================
+
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
+)
 
 # =========================
 # CONFIG
 # =========================
-
-UPLOAD_FOLDER = "static/uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE = "assets.db"
 
@@ -70,10 +78,13 @@ def add_asset():
 
         capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        filename = secure_filename(image.filename)
-        image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        # Upload para Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            image,
+            folder="asset_tracker"
+        )
 
-        image.save(image_path)
+        image_url = upload_result["secure_url"]
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -95,7 +106,7 @@ def add_asset():
             status,
             captured_by,
             employee_number,
-            filename,
+            image_url,
             capture_date
         ))
 
@@ -136,9 +147,14 @@ def search():
 
         if asset:
 
-            capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
+            capture_date = datetime.strptime(
+                asset[7],
+                "%Y-%m-%d %H:%M:%S"
+            )
 
-            days_difference = (datetime.now() - capture_date).days
+            days_difference = (
+                datetime.now() - capture_date
+            ).days
 
             if days_difference >= 365:
                 update_required = True
@@ -169,9 +185,14 @@ def updates():
 
     for asset in assets:
 
-        capture_date = datetime.strptime(asset[7], "%Y-%m-%d %H:%M:%S")
+        capture_date = datetime.strptime(
+            asset[7],
+            "%Y-%m-%d %H:%M:%S"
+        )
 
-        days_difference = (datetime.now() - capture_date).days
+        days_difference = (
+            datetime.now() - capture_date
+        ).days
 
         if days_difference >= 365:
             expired_assets.append(asset)
