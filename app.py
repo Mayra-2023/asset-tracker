@@ -12,11 +12,16 @@ app = Flask(__name__)
 # CLOUDINARY
 # =========================
 
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
-)
+print("===== CLOUDINARY TEST =====")
+print("CLOUD NAME:", os.environ.get("CLOUDINARY_CLOUD_NAME"))
+print("API KEY:", os.environ.get("CLOUDINARY_API_KEY"))
+
+if os.environ.get("CLOUDINARY_API_SECRET"):
+    print("API SECRET OK")
+else:
+    print("API SECRET MISSING")
+
+print("===========================")
 
 # =========================
 # CONFIG
