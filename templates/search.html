@@ -25,28 +25,31 @@ def search():
 
         if asset:
 
-            status = asset[3]
+            try:
 
-            capture_date = datetime.strptime(
-                asset[7],
-                "%Y-%m-%d %H:%M:%S"
-            )
+                status = asset[3]
 
-            days_difference = (
-                datetime.now() - capture_date
-            ).days
+                capture_date = datetime.strptime(
+                    asset[7],
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
-            # LÓGICA DE VERIFICAÇÃO
+                days_difference = (
+                    datetime.now() - capture_date
+                ).days
 
-            if status == "Missing":
-                verification_status = "Missing"
+                if status == "Missing":
+                    verification_status = "Missing"
 
-            elif days_difference <= 180:
-                verification_status = "Verified"
+                elif days_difference <= 180:
+                    verification_status = "Verified"
 
-            else:
-                verification_status = "Overdue"
-                update_required = True
+                else:
+                    verification_status = "Overdue"
+                    update_required = True
+
+            except Exception:
+                verification_status = "Unknown"
 
     return render_template(
         "search.html",
