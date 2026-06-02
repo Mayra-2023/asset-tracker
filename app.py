@@ -91,12 +91,15 @@ def add_asset():
             capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             # Upload para Cloudinary
-            upload_result = cloudinary.uploader.upload(
-                image,
-                folder="asset_tracker"
-            )
+            print("TEST CLOUD NAME:", cloudinary.config().cloud_name)
+print("TEST API KEY:", cloudinary.config().api_key)
 
-            image_url = upload_result["secure_url"]
+upload_result = cloudinary.uploader.upload(
+    image,
+    folder="asset_tracker"
+)
+
+image_url = upload_result["secure_url"]
 
             conn = sqlite3.connect(DATABASE)
             cursor = conn.cursor()
