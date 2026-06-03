@@ -48,6 +48,25 @@ def init_db():
 init_db()
 
 # =========================
+# HELPERS (EVITA ERROS)
+# =========================
+def row_to_dict(row):
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "asset_id": row[1],
+        "depot": row[2],
+        "status": row[3],
+        "description": row[4],
+        "captured_by": row[5],
+        "employee_number": row[6],
+        "image": row[7],
+        "capture_date": row[8],
+    }
+
+# =========================
 # HOME
 # =========================
 @app.route("/")
@@ -75,12 +94,9 @@ def add_asset():
             if not image:
                 return "No image selected", 400
 
-            upload_result = cloudinary.uploader.upload(
-                image,
-                folder="asset_tracker"
-            )
+            upload = cloudinary.uploader.upload(image, folder="asset_tracker")
+            image_url = upload["secure_url"]
 
-            image_url = upload_result["secure_url"]
             capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             conn = sqlite3.connect(DATABASE)
@@ -111,7 +127,7 @@ def add_asset():
     return render_template("add_asset.html")
 
 # =========================
-# SEARCH
+# SEARCH (ROBUSTO)
 # =========================
 @app.route("/search", methods=["GET", "POST"])
 def search():
@@ -128,21 +144,22 @@ def search():
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT *
-            FROM assets
+            SELECT * FROM assets
             WHERE asset_id = ?
             ORDER BY id DESC
             LIMIT 1
         """, (asset_id,))
 
-        asset = cursor.fetchone()
+        row = cursor.fetchone()
         conn.close()
+
+        asset = row_to_dict(row)
 
         if asset:
 
             try:
-                status = asset[3]
-                capture_date = datetime.strptime(asset[8], "%Y-%m-%d %H:%M:%S")
+                status = asset["status"]
+                capture_date = datetime.strptime(asset["capture_date"], "%Y-%m-%d %H:%M:%S")
 
                 days = (datetime.now() - capture_date).days
 
@@ -154,7 +171,8 @@ def search():
                     verification_status = "Overdue"
                     update_required = True
 
-            except:
+            except Exception as e:
+                print("SEARCH ERROR:", str(e))
                 verification_status = "Unknown"
 
     return render_template(
@@ -165,7 +183,7 @@ def search():
     )
 
 # =========================
-# UPDATES
+# UPDATES (EXPIRED)
 # =========================
 @app.route("/updates")
 def updates():
@@ -174,16 +192,16 @@ def updates():
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM assets")
-    assets = cursor.fetchall()
+    rows = cursor.fetchall()
     conn.close()
 
     expired = []
 
-    for a in assets:
+    for r in rows:
         try:
-            d = datetime.strptime(a[8], "%Y-%m-%d %H:%M:%S")
+            d = datetime.strptime(r[8], "%Y-%m-%d %H:%M:%S")
             if (datetime.now() - d).days >= 180:
-                expired.append(a)
+                expired.append(r)
         except:
             pass
 
