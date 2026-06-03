@@ -2,78 +2,33 @@
 def search():
 
     asset = None
-    update_required = False
     verification_status = None
+    update_required = False
 
     if request.method == "POST":
 
         asset_id = request.form.get("asset_id")
 
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
+        asset = Asset.query.filter_by(asset_id=asset_id).order_by(Asset.id.desc()).first()
 
-        cursor.execute("""
-            SELECT *
-            FROM assets
-            WHERE asset_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-        """, (asset_id,))
+        if not asset:
+            return render_template("search.html", asset=None, verification_status="Not Found")
 
-        row = cursor.fetchone()
-        conn.close()
+        days = (datetime.utcnow() - asset.capture_date).days
 
-        if not row:
-            return render_template(
-                "search.html",
-                asset=None,
-                update_required=False,
-                verification_status="Not Found"
-            )
+        if asset.status == "Missing":
+            verification_status = "Missing"
 
-        # map seguro (EVITA asset[8] quebrar silenciosamente)
-        asset = {
-            "id": row[0],
-            "asset_id": row[1],
-            "depot": row[2],
-            "status": row[3],
-            "description": row[4],
-            "captured_by": row[5],
-            "employee_number": row[6],
-            "image": row[7],
-            "capture_date": row[8]
-        }
+        elif days <= 180:
+            verification_status = "Verified"
 
-        try:
-            status = asset["status"]
-
-            if not asset["capture_date"]:
-                raise ValueError("Missing capture_date")
-
-            capture_date = datetime.strptime(
-                asset["capture_date"],
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            days = (datetime.now() - capture_date).days
-
-            if status == "Missing":
-                verification_status = "Missing"
-
-            elif days <= 180:
-                verification_status = "Verified"
-
-            else:
-                verification_status = "Overdue"
-                update_required = True
-
-        except Exception as e:
-            print("SEARCH ERROR:", str(e))
-            verification_status = "Unknown"
+        else:
+            verification_status = "Overdue"
+            update_required = True
 
     return render_template(
         "search.html",
         asset=asset,
-        update_required=update_required,
-        verification_status=verification_status
+        verification_status=verification_status,
+        update_required=update_required
     )
