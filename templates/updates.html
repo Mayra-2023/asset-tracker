@@ -4,18 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assets Requiring Update</title>
+
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
 
 <div class="container">
 
     <h1>Update Required</h1>
 
-    <img src="/static/logo.png" width="120">
+    <img src="/static/logo.png" width="120" alt="Logo">
 
     <p style="margin-top:20px;">
-        These assets were last updated more than 180 days ago.
+        These assets were last updated more than 365 days ago.
     </p>
 
     <hr style="margin:30px 0;">
@@ -23,33 +25,58 @@
     {% if assets %}
 
         <div class="cards">
+
         {% for asset in assets %}
+
             <div class="card">
 
                 <h2>{{ asset[1] }}</h2>
 
-                <p><b>ID:</b> {{ asset[0] }}</p>
-                <p><b>Depot:</b> {{ asset[2] }}</p>
-                <p><b>Status:</b> {{ asset[3] }}</p>
-                <p><b>Captured By:</b> {{ asset[4] }}</p>
-                <p><b>Employee Number:</b> {{ asset[5] }}</p>
-                <p><b>Last Update:</b> {{ asset[7] }}</p>
+                <p><strong>Asset ID:</strong> {{ asset[1] }}</p>
 
-                {% if asset[6] %}
-                    <img src="/static/uploads/{{ asset[6] }}"
-                         style="width:150px; margin-top:10px; border-radius:8px;">
+                <p><strong>Depot:</strong> {{ asset[2] }}</p>
+
+                <p><strong>Status:</strong> {{ asset[3] }}</p>
+
+                <p><strong>Description:</strong></p>
+                <p>{{ asset[4] }}</p>
+
+                <p><strong>Captured By:</strong> {{ asset[5] }}</p>
+
+                <p><strong>Employee Number:</strong> {{ asset[6] }}</p>
+
+                <p><strong>Last Verification:</strong> {{ asset[8] }}</p>
+
+                {% if asset[7] %}
+                    <img
+                        src="{{ asset[7] }}"
+                        alt="Asset Photo"
+                        style="
+                            width:200px;
+                            margin-top:15px;
+                            border-radius:8px;
+                            border:1px solid #ddd;
+                        "
+                    >
                 {% endif %}
 
             </div>
+
         {% endfor %}
+
         </div>
 
     {% else %}
-        <p>No expired assets found.</p>
+
+        <p>No assets currently require verification updates.</p>
+
     {% endif %}
 
     <br><br>
-    <a href="/" class="btn">Back to Home</a>
+
+    <a href="/" class="btn">
+        Back to Home
+    </a>
 
 </div>
 
