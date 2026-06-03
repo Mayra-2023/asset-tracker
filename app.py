@@ -46,6 +46,7 @@ def init_db():
             asset_id TEXT,
             depot TEXT,
             status TEXT,
+            description TEXT,
             captured_by TEXT,
             employee_number TEXT,
             image TEXT,
@@ -80,6 +81,7 @@ def add_asset():
             asset_id = request.form.get("asset_id")
             depot = request.form.get("depot")
             status = request.form.get("status")
+            description = request.form.get("description")
             captured_by = request.form.get("captured_by")
             employee_number = request.form.get("employee_number")
 
@@ -92,14 +94,14 @@ def add_asset():
 
             # Upload para Cloudinary
             print("TEST CLOUD NAME:", cloudinary.config().cloud_name)
-print("TEST API KEY:", cloudinary.config().api_key)
+            print("TEST API KEY:", cloudinary.config().api_key)
 
-upload_result = cloudinary.uploader.upload(
-    image,
-    folder="asset_tracker"
-)
+            upload_result = cloudinary.uploader.upload(
+                image,
+                folder="asset_tracker"
+            )
 
-image_url = upload_result["secure_url"]
+            image_url = upload_result["secure_url"]
 
             conn = sqlite3.connect(DATABASE)
             cursor = conn.cursor()
@@ -109,16 +111,18 @@ image_url = upload_result["secure_url"]
                     asset_id,
                     depot,
                     status,
+                    description,
                     captured_by,
                     employee_number,
                     image,
                     capture_date
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 asset_id,
                 depot,
                 status,
+                description,
                 captured_by,
                 employee_number,
                 image_url,
@@ -127,6 +131,8 @@ image_url = upload_result["secure_url"]
 
             conn.commit()
             conn.close()
+
+            print("ASSET SAVED SUCCESSFULLY")
 
             return redirect(url_for("index"))
 
@@ -165,19 +171,26 @@ def search():
 
         conn.close()
 
+        print("SEARCH RESULT:", asset)
+
         if asset:
 
-            capture_date = datetime.strptime(
-                asset[7],
-                "%Y-%m-%d %H:%M:%S"
-            )
+            try:
 
-            days_difference = (
-                datetime.now() - capture_date
-            ).days
+                capture_date = datetime.strptime(
+                    asset[8],
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
-            if days_difference >= 365:
-                update_required = True
+                days_difference = (
+                    datetime.now() - capture_date
+                ).days
+
+                if days_difference >= 365:
+                    update_required = True
+
+            except Exception as e:
+                print("SEARCH ERROR:", str(e))
 
     return render_template(
         "search.html",
@@ -205,17 +218,22 @@ def updates():
 
     for asset in assets:
 
-        capture_date = datetime.strptime(
-            asset[7],
-            "%Y-%m-%d %H:%M:%S"
-        )
+        try:
 
-        days_difference = (
-            datetime.now() - capture_date
-        ).days
+            capture_date = datetime.strptime(
+                asset[8],
+                "%Y-%m-%d %H:%M:%S"
+            )
 
-        if days_difference >= 365:
-            expired_assets.append(asset)
+            days_difference = (
+                datetime.now() - capture_date
+            ).days
+
+            if days_difference >= 365:
+                expired_assets.append(asset)
+
+        except Exception as e:
+            print("UPDATE ERROR:", str(e))
 
     return render_template(
         "updates.html",
