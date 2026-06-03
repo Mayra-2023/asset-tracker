@@ -7,36 +7,29 @@ def search():
 
     if request.method == "POST":
 
-        asset_id = request.form["asset_id"]
+        asset_id = request.form.get("asset_id")
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT * FROM assets
+            SELECT *
+            FROM assets
             WHERE asset_id = ?
             ORDER BY id DESC
             LIMIT 1
         """, (asset_id,))
 
         asset = cursor.fetchone()
-
         conn.close()
 
         if asset:
 
             try:
-
                 status = asset[3]
+                capture_date = datetime.strptime(asset[8], "%Y-%m-%d %H:%M:%S")
 
-                capture_date = datetime.strptime(
-                    asset[8],
-                    "%Y-%m-%d %H:%M:%S"
-                )
-
-                days_difference = (
-                    datetime.now() - capture_date
-                ).days
+                days_difference = (datetime.now() - capture_date).days
 
                 if status == "Missing":
                     verification_status = "Missing"
@@ -48,7 +41,8 @@ def search():
                     verification_status = "Overdue"
                     update_required = True
 
-            except Exception:
+            except Exception as e:
+                print("SEARCH ERROR:", str(e))
                 verification_status = "Unknown"
 
     return render_template(
