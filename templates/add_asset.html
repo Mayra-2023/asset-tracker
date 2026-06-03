@@ -6,7 +6,6 @@
     <title>Add Asset</title>
 
     <style>
-
         body{
             font-family: Arial, sans-serif;
             background:#f4f4f4;
@@ -83,79 +82,113 @@
             text-decoration:underline;
         }
 
+        .note{
+            font-size:13px;
+            color:#666;
+            margin-top:5px;
+        }
     </style>
-
 </head>
+
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <div class="form-box">
+    <div class="form-box">
 
-            <h1>Add Asset</h1>
+        <h1>Add Asset</h1>
 
-            <form method="POST" enctype="multipart/form-data">
+        <form action="/add" method="POST" enctype="multipart/form-data">
 
-                <label>Asset ID</label>
-                <input type="text" name="asset_id" required>
+            <label for="asset_id">Asset ID</label>
+            <input
+                type="text"
+                id="asset_id"
+                name="asset_id"
+                required
+            >
 
-                <label>Depot</label>
-                <select name="depot" required>
-                    <option value="">Select Depot</option>
-                    <option value="Maragra">Maragra</option>
-                    <option value="Xinavane">Xinavane</option>
-                    <option value="Mafambisse">Mafambisse</option>
-                    <option value="Marromeu">Marromeu</option>
-                    <option value="Matola">Matola</option>
-                </select>
+            <label for="depot">Depot</label>
+            <select
+                id="depot"
+                name="depot"
+                required
+            >
+                <option value="">Select Depot</option>
+                <option value="Maragra">Maragra</option>
+                <option value="Xinavane">Xinavane</option>
+                <option value="Mafambisse">Mafambisse</option>
+                <option value="Marromeu">Marromeu</option>
+                <option value="Matola">Matola</option>
+            </select>
 
-                <label>Status</label>
-                <select name="status" required>
-                    <option value="">Select Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Standby">Standby</option>
-                    <option value="Under Maintenance">Under Maintenance</option>
-                    <option value="Damaged">Damaged</option>
-                    <option value="Missing">Missing</option>
-                    <option value="Disposed">Disposed</option>
-                </select>
+            <label for="status">Status</label>
+            <select
+                id="status"
+                name="status"
+                required
+            >
+                <option value="">Select Status</option>
+                <option value="Active">Active</option>
+                <option value="Standby">Standby</option>
+                <option value="Under Maintenance">Under Maintenance</option>
+                <option value="Damaged">Damaged</option>
+                <option value="Missing">Missing</option>
+                <option value="Disposed">Disposed</option>
+            </select>
 
-                <label>Asset Description</label>
-                <textarea
-                    name="description"
-                    maxlength="1000"
-                    required
-                    placeholder="Describe the asset, model, serial number, condition, location, etc."
-                ></textarea>
+            <label for="description">Asset Description</label>
+            <textarea
+                id="description"
+                name="description"
+                maxlength="1000"
+                required
+                placeholder="Describe the asset, model, serial number, condition, location, etc."
+            ></textarea>
 
-                <label>Captured By</label>
-                <input type="text" name="captured_by" required>
+            <label for="captured_by">Captured By</label>
+            <input
+                type="text"
+                id="captured_by"
+                name="captured_by"
+                required
+            >
 
-                <label>Employee Number</label>
-                <input type="text" name="employee_number" required>
+            <label for="employee_number">Employee Number</label>
+            <input
+                type="text"
+                id="employee_number"
+                name="employee_number"
+                required
+            >
 
-                <label>Upload Photo</label>
-                <input
-                    type="file"
-                    name="image"
-                    accept="image/*"
-                    capture="environment"
-                    required
-                >
+            <label for="image">Upload Photo</label>
+            <input
+                type="file"
+                id="image"
+                name="image"
+                accept="image/*"
+                capture="environment"
+                required
+            >
 
-                <button type="submit" class="btn">
-                    Save Asset
-                </button>
+            <div class="note">
+                Accepted formats: JPG, PNG, JPEG
+            </div>
 
-            </form>
+            <button type="submit" class="btn">
+                Save Asset
+            </button>
 
-            <a href="/" class="back">
-                ← Back to Home
-            </a>
+        </form>
 
-        </div>
+        <a href="/" class="back">
+            ← Back to Home
+        </a>
 
     </div>
+
+</div>
 
 </body>
 </html>
