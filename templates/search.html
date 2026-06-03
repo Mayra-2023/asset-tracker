@@ -20,30 +20,56 @@ def search():
             LIMIT 1
         """, (asset_id,))
 
-        asset = cursor.fetchone()
+        row = cursor.fetchone()
         conn.close()
 
-        if asset:
+        if not row:
+            return render_template(
+                "search.html",
+                asset=None,
+                update_required=False,
+                verification_status="Not Found"
+            )
 
-            try:
-                status = asset[3]
-                capture_date = datetime.strptime(asset[8], "%Y-%m-%d %H:%M:%S")
+        # map seguro (EVITA asset[8] quebrar silenciosamente)
+        asset = {
+            "id": row[0],
+            "asset_id": row[1],
+            "depot": row[2],
+            "status": row[3],
+            "description": row[4],
+            "captured_by": row[5],
+            "employee_number": row[6],
+            "image": row[7],
+            "capture_date": row[8]
+        }
 
-                days_difference = (datetime.now() - capture_date).days
+        try:
+            status = asset["status"]
 
-                if status == "Missing":
-                    verification_status = "Missing"
+            if not asset["capture_date"]:
+                raise ValueError("Missing capture_date")
 
-                elif days_difference <= 180:
-                    verification_status = "Verified"
+            capture_date = datetime.strptime(
+                asset["capture_date"],
+                "%Y-%m-%d %H:%M:%S"
+            )
 
-                else:
-                    verification_status = "Overdue"
-                    update_required = True
+            days = (datetime.now() - capture_date).days
 
-            except Exception as e:
-                print("SEARCH ERROR:", str(e))
-                verification_status = "Unknown"
+            if status == "Missing":
+                verification_status = "Missing"
+
+            elif days <= 180:
+                verification_status = "Verified"
+
+            else:
+                verification_status = "Overdue"
+                update_required = True
+
+        except Exception as e:
+            print("SEARCH ERROR:", str(e))
+            verification_status = "Unknown"
 
     return render_template(
         "search.html",
