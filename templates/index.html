@@ -19,42 +19,54 @@
     <h1>Asset Verification System</h1>
 
     <p>
-        Asset registration, verification and tracking platform.
+        Central platform for asset registration, verification, tracking and reporting.
     </p>
 
     <div class="cards">
 
+        <!-- ADD ASSET -->
         <div class="card">
             <h2>Add Asset</h2>
             <p>
-                Register a new asset with photo,
-                description and verification details.
+                Register new assets with image, description and full tracking details.
             </p>
-            <a href="/add" class="btn">
-                Add Asset
-            </a>
+            <a href="/add" class="btn">Add Asset</a>
         </div>
 
+        <!-- SEARCH -->
         <div class="card">
             <h2>Search Asset</h2>
             <p>
-                Search asset records and verify
-                current status, description and photo.
+                Search assets and view status, description, image and verification history.
             </p>
-            <a href="/search" class="btn">
-                Search Asset
-            </a>
+            <a href="/search" class="btn">Search Asset</a>
         </div>
 
+        <!-- UPDATES -->
         <div class="card">
             <h2>Update Required</h2>
             <p>
-                View assets requiring
-                annual verification updates.
+                View assets that require periodic verification updates (older than 180 days).
             </p>
-            <a href="/updates" class="btn">
-                View Assets
-            </a>
+            <a href="/updates" class="btn">View Updates</a>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="card">
+            <h2>Dashboard</h2>
+            <p>
+                View asset statistics by status (Active, Missing, Maintenance, etc.).
+            </p>
+            <a href="/summary" class="btn">Open Dashboard</a>
+        </div>
+
+        <!-- EXPORT -->
+        <div class="card">
+            <h2>Export Data</h2>
+            <p>
+                Download all asset records in CSV format for reporting and analysis.
+            </p>
+            <a href="/export" class="btn">Export CSV</a>
         </div>
 
     </div>
