@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, Response
-import sqlite3
+import psycopg2
 import os
 from datetime import datetime
 import csv
@@ -19,18 +19,18 @@ cloudinary.config(
     secure=True
 )
 
-DATABASE = "assets.db"
 
 # =========================
 # DATABASE
 # =========================
 def init_db():
-    conn = sqlite3.connect(DATABASE)
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS assets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             asset_id TEXT,
             depot TEXT,
             status TEXT,
@@ -43,8 +43,8 @@ def init_db():
     """)
 
     conn.commit()
+    cursor.close()
     conn.close()
-
 init_db()
 
 # =========================
