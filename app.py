@@ -2,8 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, Response
 import psycopg2
 import os
 from datetime import datetime
-import csv
-
 import cloudinary
 import cloudinary.uploader
 
@@ -19,12 +17,14 @@ cloudinary.config(
     secure=True
 )
 
+# =========================
+# DATABASE (POSTGRESQL)
+# =========================
+def get_connection():
+    return psycopg2.connect(os.environ["DATABASE_URL"])
 
-# =========================
-# DATABASE
-# =========================
+
 def init_db():
-
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -45,10 +45,11 @@ def init_db():
     conn.commit()
     cursor.close()
     conn.close()
+
 init_db()
 
 # =========================
-# HELPERS (EVITA ERROS)
+# HELPERS
 # =========================
 def row_to_dict(row):
     if not row:
@@ -99,7 +100,7 @@ def add_asset():
 
             capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            conn = sqlite3.connect(DATABASE)
+            conn = get_connection()
             cursor = conn.cursor()
 
             cursor.execute("""
@@ -108,7 +109,7 @@ def add_asset():
                     captured_by, employee_number,
                     image, capture_date
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 asset_id, depot, status, description,
                 captured_by, employee_number,
@@ -116,6 +117,7 @@ def add_asset():
             ))
 
             conn.commit()
+            cursor.close()
             conn.close()
 
             return redirect(url_for("index"))
@@ -127,7 +129,7 @@ def add_asset():
     return render_template("add_asset.html")
 
 # =========================
-# SEARCH (ROBUSTO)
+# SEARCH
 # =========================
 @app.route("/search", methods=["GET", "POST"])
 def search():
@@ -140,26 +142,30 @@ def search():
 
         asset_id = request.form.get("asset_id")
 
-        conn = sqlite3.connect(DATABASE)
+        conn = get_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT * FROM assets
-            WHERE asset_id = ?
+            SELECT *
+            FROM assets
+            WHERE asset_id = %s
             ORDER BY id DESC
             LIMIT 1
         """, (asset_id,))
 
         row = cursor.fetchone()
+        cursor.close()
         conn.close()
 
-        asset = row_to_dict(row)
-
-        if asset:
+        if row:
+            asset = row_to_dict(row)
 
             try:
                 status = asset["status"]
-                capture_date = datetime.strptime(asset["capture_date"], "%Y-%m-%d %H:%M:%S")
+                capture_date = datetime.strptime(
+                    asset["capture_date"],
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
                 days = (datetime.now() - capture_date).days
 
@@ -183,16 +189,18 @@ def search():
     )
 
 # =========================
-# UPDATES (EXPIRED)
+# UPDATES
 # =========================
 @app.route("/updates")
 def updates():
 
-    conn = sqlite3.connect(DATABASE)
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM assets")
     rows = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
     expired = []
@@ -208,16 +216,18 @@ def updates():
     return render_template("updates.html", assets=expired)
 
 # =========================
-# DASHBOARD (SUMMARY)
+# SUMMARY
 # =========================
 @app.route("/summary")
 def summary():
 
-    conn = sqlite3.connect(DATABASE)
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT status FROM assets")
     rows = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
     stats = {
@@ -241,11 +251,13 @@ def summary():
 @app.route("/export")
 def export():
 
-    conn = sqlite3.connect(DATABASE)
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM assets")
     rows = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
     def generate():
