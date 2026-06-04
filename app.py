@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, Response
-import psycopg2
 import os
+import psycopg2
 from datetime import datetime
 import cloudinary
 import cloudinary.uploader
@@ -18,17 +18,19 @@ cloudinary.config(
 )
 
 # =========================
-# DATABASE (POSTGRESQL)
+# POSTGRES CONNECTION
 # =========================
-def get_connection():
+def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
-
+# =========================
+# INIT DB
+# =========================
 def init_db():
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = get_conn()
+    cur = conn.cursor()
 
-    cursor.execute("""
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS assets (
             id SERIAL PRIMARY KEY,
             asset_id TEXT,
@@ -38,34 +40,15 @@ def init_db():
             captured_by TEXT,
             employee_number TEXT,
             image TEXT,
-            capture_date TEXT
+            capture_date TIMESTAMP
         )
     """)
 
     conn.commit()
-    cursor.close()
+    cur.close()
     conn.close()
 
 init_db()
-
-# =========================
-# HELPERS
-# =========================
-def row_to_dict(row):
-    if not row:
-        return None
-
-    return {
-        "id": row[0],
-        "asset_id": row[1],
-        "depot": row[2],
-        "status": row[3],
-        "description": row[4],
-        "captured_by": row[5],
-        "employee_number": row[6],
-        "image": row[7],
-        "capture_date": row[8],
-    }
 
 # =========================
 # HOME
@@ -82,49 +65,41 @@ def add_asset():
 
     if request.method == "POST":
 
-        try:
-            asset_id = request.form.get("asset_id")
-            depot = request.form.get("depot")
-            status = request.form.get("status")
-            description = request.form.get("description")
-            captured_by = request.form.get("captured_by")
-            employee_number = request.form.get("employee_number")
+        asset_id = request.form.get("asset_id")
+        depot = request.form.get("depot")
+        status = request.form.get("status")
+        description = request.form.get("description")
+        captured_by = request.form.get("captured_by")
+        employee_number = request.form.get("employee_number")
 
-            image = request.files.get("image")
+        image = request.files.get("image")
 
-            if not image:
-                return "No image selected", 400
+        upload = cloudinary.uploader.upload(image, folder="asset_tracker")
+        image_url = upload["secure_url"]
 
-            upload = cloudinary.uploader.upload(image, folder="asset_tracker")
-            image_url = upload["secure_url"]
+        capture_date = datetime.now()
 
-            capture_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn = get_conn()
+        cur = conn.cursor()
 
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO assets (
-                    asset_id, depot, status, description,
-                    captured_by, employee_number,
-                    image, capture_date
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
+        cur.execute("""
+            INSERT INTO assets (
                 asset_id, depot, status, description,
                 captured_by, employee_number,
-                image_url, capture_date
-            ))
+                image, capture_date
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            asset_id, depot, status, description,
+            captured_by, employee_number,
+            image_url, capture_date
+        ))
 
-            conn.commit()
-            cursor.close()
-            conn.close()
+        conn.commit()
+        cur.close()
+        conn.close()
 
-            return redirect(url_for("index"))
-
-        except Exception as e:
-            print("ADD ERROR:", str(e))
-            return f"Error: {str(e)}", 500
+        return redirect(url_for("index"))
 
     return render_template("add_asset.html")
 
@@ -135,57 +110,56 @@ def add_asset():
 def search():
 
     asset = None
-    update_required = False
     verification_status = None
+    update_required = False
 
     if request.method == "POST":
 
         asset_id = request.form.get("asset_id")
 
-        conn = get_connection()
-        cursor = conn.cursor()
+        conn = get_conn()
+        cur = conn.cursor()
 
-        cursor.execute("""
-            SELECT *
-            FROM assets
+        cur.execute("""
+            SELECT * FROM assets
             WHERE asset_id = %s
             ORDER BY id DESC
             LIMIT 1
         """, (asset_id,))
 
-        row = cursor.fetchone()
-        cursor.close()
+        row = cur.fetchone()
+        cur.close()
         conn.close()
 
         if row:
-            asset = row_to_dict(row)
 
-            try:
-                status = asset["status"]
-                capture_date = datetime.strptime(
-                    asset["capture_date"],
-                    "%Y-%m-%d %H:%M:%S"
-                )
+            asset = {
+                "id": row[0],
+                "asset_id": row[1],
+                "depot": row[2],
+                "status": row[3],
+                "description": row[4],
+                "captured_by": row[5],
+                "employee_number": row[6],
+                "image": row[7],
+                "capture_date": row[8],
+            }
 
-                days = (datetime.now() - capture_date).days
+            days = (datetime.now() - row[8]).days
 
-                if status == "Missing":
-                    verification_status = "Missing"
-                elif days <= 180:
-                    verification_status = "Verified"
-                else:
-                    verification_status = "Overdue"
-                    update_required = True
-
-            except Exception as e:
-                print("SEARCH ERROR:", str(e))
-                verification_status = "Unknown"
+            if row[3] == "Missing":
+                verification_status = "Missing"
+            elif days <= 180:
+                verification_status = "Verified"
+            else:
+                verification_status = "Overdue"
+                update_required = True
 
     return render_template(
         "search.html",
         asset=asset,
-        update_required=update_required,
-        verification_status=verification_status
+        verification_status=verification_status,
+        update_required=update_required
     )
 
 # =========================
@@ -194,24 +168,20 @@ def search():
 @app.route("/updates")
 def updates():
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = get_conn()
+    cur = conn.cursor()
 
-    cursor.execute("SELECT * FROM assets")
-    rows = cursor.fetchall()
+    cur.execute("SELECT * FROM assets")
+    rows = cur.fetchall()
 
-    cursor.close()
+    cur.close()
     conn.close()
 
     expired = []
 
     for r in rows:
-        try:
-            d = datetime.strptime(r[8], "%Y-%m-%d %H:%M:%S")
-            if (datetime.now() - d).days >= 180:
-                expired.append(r)
-        except:
-            pass
+        if (datetime.now() - r[8]).days >= 180:
+            expired.append(r)
 
     return render_template("updates.html", assets=expired)
 
@@ -221,13 +191,13 @@ def updates():
 @app.route("/summary")
 def summary():
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = get_conn()
+    cur = conn.cursor()
 
-    cursor.execute("SELECT status FROM assets")
-    rows = cursor.fetchall()
+    cur.execute("SELECT status FROM assets")
+    rows = cur.fetchall()
 
-    cursor.close()
+    cur.close()
     conn.close()
 
     stats = {
@@ -251,18 +221,17 @@ def summary():
 @app.route("/export")
 def export():
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = get_conn()
+    cur = conn.cursor()
 
-    cursor.execute("SELECT * FROM assets")
-    rows = cursor.fetchall()
+    cur.execute("SELECT * FROM assets")
+    rows = cur.fetchall()
 
-    cursor.close()
+    cur.close()
     conn.close()
 
     def generate():
         yield "id,asset_id,depot,status,description,captured_by,employee_number,image,capture_date\n"
-
         for r in rows:
             yield ",".join([str(x) if x else "" for x in r]) + "\n"
 
