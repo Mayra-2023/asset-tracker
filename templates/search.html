@@ -25,7 +25,13 @@
         background:white;
         padding:30px;
         border-radius:12px;
-        box-shadow:0 2px 10px rgba(0,0,0,.1);
+        box-shadow:0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    h1{
+        text-align:center;
+        color:#222;
+        margin-bottom:25px;
     }
 
     input{
@@ -45,16 +51,11 @@
         background:#007BFF;
         color:white;
         cursor:pointer;
+        font-size:16px;
     }
 
     button:hover{
         background:#0056b3;
-    }
-
-    img{
-        max-width:100%;
-        border-radius:10px;
-        margin-top:15px;
     }
 
     .result{
@@ -63,9 +64,67 @@
         padding-top:20px;
     }
 
+    .asset-title{
+        color:#007BFF;
+        margin-bottom:20px;
+    }
+
     .status{
         font-weight:bold;
         font-size:18px;
+        margin-top:15px;
+    }
+
+    .verified{
+        color:green;
+    }
+
+    .missing{
+        color:red;
+    }
+
+    .overdue{
+        color:orange;
+    }
+
+    .notfound{
+        color:red;
+        font-weight:bold;
+        text-align:center;
+        margin-top:20px;
+    }
+
+    img{
+        width:100%;
+        max-width:500px;
+        border-radius:10px;
+        margin-top:15px;
+        border:1px solid #ddd;
+    }
+
+    .image-container{
+        text-align:center;
+    }
+
+    .warning{
+        margin-top:15px;
+        padding:12px;
+        background:#fff3cd;
+        border:1px solid #ffe69c;
+        border-radius:8px;
+    }
+
+    .back-home{
+        display:block;
+        text-align:center;
+        margin-top:25px;
+        text-decoration:none;
+        color:#007BFF;
+        font-weight:bold;
+    }
+
+    .back-home:hover{
+        text-decoration:underline;
     }
 </style>
 ```
@@ -95,15 +154,17 @@
     </form>
 
     {% if verification_status == "Not Found" %}
-        <div class="result">
-            <h3>Asset not found</h3>
+        <div class="notfound">
+            Asset not found.
         </div>
     {% endif %}
 
     {% if asset %}
     <div class="result">
 
-        <h2>{{ asset.asset_id }}</h2>
+        <h2 class="asset-title">
+            Asset ID: {{ asset.asset_id }}
+        </h2>
 
         <p><strong>Depot:</strong> {{ asset.depot }}</p>
 
@@ -115,25 +176,40 @@
 
         <p><strong>Employee Number:</strong> {{ asset.employee_number }}</p>
 
-        <p><strong>Date:</strong> {{ asset.capture_date }}</p>
+        <p><strong>Capture Date:</strong> {{ asset.capture_date }}</p>
 
-        <p class="status">
-            Verification Status:
-            {{ verification_status }}
-        </p>
+        {% if verification_status == "Verified" %}
+            <p class="status verified">
+                Verification Status: Verified
+            </p>
+        {% elif verification_status == "Missing" %}
+            <p class="status missing">
+                Verification Status: Missing
+            </p>
+        {% elif verification_status == "Overdue" %}
+            <p class="status overdue">
+                Verification Status: Overdue
+            </p>
+        {% endif %}
 
         {% if asset.image %}
-            <img src="{{ asset.image }}">
+        <div class="image-container">
+            <img src="{{ asset.image }}" alt="Asset Image">
+        </div>
         {% endif %}
 
         {% if update_required %}
-            <p>
-                This asset requires verification update.
-            </p>
+        <div class="warning">
+            This asset requires a verification update because it has exceeded 180 days since the last capture.
+        </div>
         {% endif %}
 
     </div>
     {% endif %}
+
+    <a href="/" class="back-home">
+        ← Back Home
+    </a>
 
 </div>
 ```
