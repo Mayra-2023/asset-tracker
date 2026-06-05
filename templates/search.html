@@ -1,34 +1,68 @@
 @app.route("/search", methods=["GET", "POST"])
 def search():
 
-    asset = None
-    verification_status = None
-    update_required = False
+```
+asset = None
+verification_status = None
+update_required = False
 
-    if request.method == "POST":
+if request.method == "POST":
 
-        asset_id = request.form.get("asset_id")
+    asset_id = request.form.get("asset_id", "").strip()
 
-        asset = Asset.query.filter_by(asset_id=asset_id).order_by(Asset.id.desc()).first()
+    if asset_id:
 
-        if not asset:
-            return render_template("search.html", asset=None, verification_status="Not Found")
+        conn = get_conn()
+        cur = conn.cursor()
 
-        days = (datetime.utcnow() - asset.capture_date).days
+        cur.execute("""
+            SELECT *
+            FROM assets
+            WHERE asset_id = %s
+            ORDER BY id DESC
+            LIMIT 1
+        """, (asset_id,))
 
-        if asset.status == "Missing":
-            verification_status = "Missing"
+        row = cur.fetchone()
 
-        elif days <= 180:
-            verification_status = "Verified"
+        cur.close()
+        conn.close()
+
+        if row:
+
+            asset = {
+                "id": row[0],
+                "asset_id": row[1],
+                "depot": row[2],
+                "status": row[3],
+                "description": row[4],
+                "captured_by": row[5],
+                "employee_number": row[6],
+                "image": row[7],
+                "capture_date": row[8]
+            }
+
+            if row[8]:
+
+                days = (datetime.now() - row[8]).days
+
+                if row[3] == "Missing":
+                    verification_status = "Missing"
+
+                elif days <= 180:
+                    verification_status = "Verified"
+
+                else:
+                    verification_status = "Overdue"
+                    update_required = True
 
         else:
-            verification_status = "Overdue"
-            update_required = True
+            verification_status = "Not Found"
 
-    return render_template(
-        "search.html",
-        asset=asset,
-        verification_status=verification_status,
-        update_required=update_required
-    )
+return render_template(
+    "search.html",
+    asset=asset,
+    verification_status=verification_status,
+    update_required=update_required
+)
+```
