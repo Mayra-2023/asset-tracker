@@ -1,68 +1,144 @@
-@app.route("/search", methods=["GET", "POST"])
-def search():
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Asset</title>
 
 ```
-asset = None
-verification_status = None
-update_required = False
+<style>
+    body{
+        font-family: Arial, sans-serif;
+        background:#f4f4f4;
+        margin:0;
+        padding:0;
+    }
 
-if request.method == "POST":
+    .container{
+        max-width:800px;
+        margin:auto;
+        padding:40px 20px;
+    }
 
-    asset_id = request.form.get("asset_id", "").strip()
+    .box{
+        background:white;
+        padding:30px;
+        border-radius:12px;
+        box-shadow:0 2px 10px rgba(0,0,0,.1);
+    }
 
-    if asset_id:
+    input{
+        width:100%;
+        padding:12px;
+        border:1px solid #ccc;
+        border-radius:8px;
+        box-sizing:border-box;
+    }
 
-        conn = get_conn()
-        cur = conn.cursor()
+    button{
+        width:100%;
+        padding:12px;
+        margin-top:15px;
+        border:none;
+        border-radius:8px;
+        background:#007BFF;
+        color:white;
+        cursor:pointer;
+    }
 
-        cur.execute("""
-            SELECT *
-            FROM assets
-            WHERE asset_id = %s
-            ORDER BY id DESC
-            LIMIT 1
-        """, (asset_id,))
+    button:hover{
+        background:#0056b3;
+    }
 
-        row = cur.fetchone()
+    img{
+        max-width:100%;
+        border-radius:10px;
+        margin-top:15px;
+    }
 
-        cur.close()
-        conn.close()
+    .result{
+        margin-top:30px;
+        border-top:1px solid #ddd;
+        padding-top:20px;
+    }
 
-        if row:
-
-            asset = {
-                "id": row[0],
-                "asset_id": row[1],
-                "depot": row[2],
-                "status": row[3],
-                "description": row[4],
-                "captured_by": row[5],
-                "employee_number": row[6],
-                "image": row[7],
-                "capture_date": row[8]
-            }
-
-            if row[8]:
-
-                days = (datetime.now() - row[8]).days
-
-                if row[3] == "Missing":
-                    verification_status = "Missing"
-
-                elif days <= 180:
-                    verification_status = "Verified"
-
-                else:
-                    verification_status = "Overdue"
-                    update_required = True
-
-        else:
-            verification_status = "Not Found"
-
-return render_template(
-    "search.html",
-    asset=asset,
-    verification_status=verification_status,
-    update_required=update_required
-)
+    .status{
+        font-weight:bold;
+        font-size:18px;
+    }
+</style>
 ```
+
+</head>
+
+<body>
+
+<div class="container">
+
+```
+<div class="box">
+
+    <h1>Search Asset</h1>
+
+    <form method="POST">
+        <input
+            type="text"
+            name="asset_id"
+            placeholder="Enter Asset ID"
+            required
+        >
+
+        <button type="submit">
+            Search
+        </button>
+    </form>
+
+    {% if verification_status == "Not Found" %}
+        <div class="result">
+            <h3>Asset not found</h3>
+        </div>
+    {% endif %}
+
+    {% if asset %}
+    <div class="result">
+
+        <h2>{{ asset.asset_id }}</h2>
+
+        <p><strong>Depot:</strong> {{ asset.depot }}</p>
+
+        <p><strong>Status:</strong> {{ asset.status }}</p>
+
+        <p><strong>Description:</strong> {{ asset.description }}</p>
+
+        <p><strong>Captured By:</strong> {{ asset.captured_by }}</p>
+
+        <p><strong>Employee Number:</strong> {{ asset.employee_number }}</p>
+
+        <p><strong>Date:</strong> {{ asset.capture_date }}</p>
+
+        <p class="status">
+            Verification Status:
+            {{ verification_status }}
+        </p>
+
+        {% if asset.image %}
+            <img src="{{ asset.image }}">
+        {% endif %}
+
+        {% if update_required %}
+            <p>
+                This asset requires verification update.
+            </p>
+        {% endif %}
+
+    </div>
+    {% endif %}
+
+</div>
+```
+
+</div>
+
+</body>
+</html>
