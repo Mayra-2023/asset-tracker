@@ -8,16 +8,69 @@
 
 <h1>Asset Dashboard</h1>
 
-<table border="1">
+<div class="dashboard-cards">
+
+    <div class="card">
+        <h3>Total Assets</h3>
+        <h1>{{ total_assets }}</h1>
+    </div>
+
+    <div class="card">
+        <h3>Active</h3>
+        <h1>{{ stats["Active"] }}</h1>
+    </div>
+
+    <div class="card">
+        <h3>Missing</h3>
+        <h1>{{ stats["Missing"] }}</h1>
+    </div>
+
+    <div class="card">
+        <h3>Damaged</h3>
+        <h1>{{ stats["Damaged"] }}</h1>
+    </div>
+
+    <div class="card">
+        <h3>Under Maintenance</h3>
+        <h1>{{ stats["Under Maintenance"] }}</h1>
+    </div>
+
+</div>
+
+<h2>Assets by Depot</h2>
+
+<table>
     <tr>
-        <th>Status</th>
-        <th>Total</th>
+        <th>Depot</th>
+        <th>Total Assets</th>
     </tr>
 
-    {% for status, total in stats.items() %}
+    {% for depot, total in depot_rows %}
     <tr>
-        <td>{{ status }}</td>
+        <td>{{ depot }}</td>
         <td>{{ total }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2>Recent Asset Captures</h2>
+
+<table>
+    <tr>
+        <th>Asset ID</th>
+        <th>Depot</th>
+        <th>Status</th>
+        <th>Captured By</th>
+        <th>Date</th>
+    </tr>
+
+    {% for asset in recent_assets %}
+    <tr>
+        <td>{{ asset[0] }}</td>
+        <td>{{ asset[1] }}</td>
+        <td>{{ asset[2] }}</td>
+        <td>{{ asset[3] }}</td>
+        <td>{{ asset[4] }}</td>
     </tr>
     {% endfor %}
 </table>
@@ -25,6 +78,12 @@
 <br>
 
 <a href="/">Back Home</a>
+
+<script>
+setTimeout(function(){
+    location.reload();
+}, 30000);
+</script>
 
 </body>
 </html>
