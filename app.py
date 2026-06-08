@@ -275,6 +275,88 @@ def admin():
         "admin.html",
         assets=assets
     )
+    # =========================
+# EDIT ASSET
+# =========================
+@app.route("/edit/<int:id>", methods=["GET", "POST"])
+def edit_asset(id):
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    if request.method == "POST":
+
+        asset_id = request.form.get("asset_id")
+        depot = request.form.get("depot")
+        status = request.form.get("status")
+        description = request.form.get("description")
+        captured_by = request.form.get("captured_by")
+        employee_number = request.form.get("employee_number")
+
+        cur.execute("""
+            UPDATE assets
+            SET
+                asset_id=%s,
+                depot=%s,
+                status=%s,
+                description=%s,
+                captured_by=%s,
+                employee_number=%s
+            WHERE id=%s
+        """, (
+            asset_id,
+            depot,
+            status,
+            description,
+            captured_by,
+            employee_number,
+            id
+        ))
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        return redirect(url_for("admin"))
+
+    cur.execute("""
+        SELECT *
+        FROM assets
+        WHERE id=%s
+    """, (id,))
+
+    asset = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "edit_asset.html",
+        asset=asset
+    )
+
+
+# =========================
+# DELETE ASSET
+# =========================
+@app.route("/delete/<int:id>")
+def delete_asset(id):
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM assets
+        WHERE id=%s
+    """, (id,))
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return redirect(url_for("admin"))
 # =========================
 # EXPORT CSV
 # =========================
