@@ -251,7 +251,30 @@ def summary():
         depot_rows=depot_rows,
         recent_assets=recent_assets
     )
+# =========================
+# ADMIN PANEL
+# =========================
+@app.route("/admin")
+def admin():
 
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM assets
+        ORDER BY capture_date DESC
+    """)
+
+    assets = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "admin.html",
+        assets=assets
+    )
 # =========================
 # EXPORT CSV
 # =========================
