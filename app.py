@@ -194,11 +194,17 @@ def summary():
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("SELECT status FROM assets")
-    rows = cur.fetchall()
+    # Total Assets
+    cur.execute("SELECT COUNT(*) FROM assets")
+    total_assets = cur.fetchone()[0]
 
-    cur.close()
-    conn.close()
+    # Totais por Status
+    cur.execute("""
+        SELECT status, COUNT(*)
+        FROM assets
+        GROUP BY status
+    """)
+    status_rows = cur.fetchall()
 
     stats = {
         "Active": 0,
@@ -209,11 +215,42 @@ def summary():
         "Disposed": 0
     }
 
-    for r in rows:
-        if r[0] in stats:
-            stats[r[0]] += 1
+    for status, count in status_rows:
+        if status in stats:
+            stats[status] = count
 
-    return render_template("summary.html", stats=stats)
+    # Assets por Depot
+    cur.execute("""
+        SELECT depot, COUNT(*)
+        FROM assets
+        GROUP BY depot
+        ORDER BY depot
+    """)
+    depot_rows = cur.fetchall()
+
+    # Últimos 10 ativos
+    cur.execute("""
+        SELECT asset_id,
+               depot,
+               status,
+               captured_by,
+               capture_date
+        FROM assets
+        ORDER BY capture_date DESC
+        LIMIT 10
+    """)
+    recent_assets = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "summary.html",
+        total_assets=total_assets,
+        stats=stats,
+        depot_rows=depot_rows,
+        recent_assets=recent_assets
+    )
 
 # =========================
 # EXPORT CSV
