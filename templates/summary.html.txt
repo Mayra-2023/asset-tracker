@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Asset Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h1>Asset Dashboard</h1>
+
+<table border="1">
+    <tr>
+        <th>Status</th>
+        <th>Total</th>
+    </tr>
+
+    {% for status, total in stats.items() %}
+    <tr>
+        <td>{{ status }}</td>
+        <td>{{ total }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<a href="/">Back Home</a>
+
+</body>
+</html>
