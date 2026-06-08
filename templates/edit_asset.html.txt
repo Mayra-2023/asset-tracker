@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Edit Asset</title>
+</head>
+<body>
+
+<h2>Edit Asset</h2>
+
+<form method="POST">
+
+```
+<label>Asset ID</label><br>
+<input type="text" name="asset_id" value="{{ asset[1] }}"><br><br>
+
+<label>Depot</label><br>
+<input type="text" name="depot" value="{{ asset[2] }}"><br><br>
+
+<label>Status</label><br>
+<input type="text" name="status" value="{{ asset[3] }}"><br><br>
+
+<label>Description</label><br>
+<input type="text" name="description" value="{{ asset[4] }}"><br><br>
+
+<label>Captured By</label><br>
+<input type="text" name="captured_by" value="{{ asset[5] }}"><br><br>
+
+<label>Employee Number</label><br>
+<input type="text" name="employee_number" value="{{ asset[6] }}"><br><br>
+
+<button type="submit">
+    Save Changes
+</button>
+```
+
+</form>
+
+<br>
+
+<a href="/admin">Back to Admin</a>
+
+</body>
+</html>
