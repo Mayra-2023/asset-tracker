@@ -30,12 +30,6 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
-    ...
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
     # Tabela Assets
     cur.execute("""
         CREATE TABLE IF NOT EXISTS assets (
