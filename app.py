@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, Response
+from flask import Flask, render_template, request, redirect, session
 import os
 import psycopg2
 from datetime import datetime
@@ -6,6 +6,7 @@ import cloudinary
 import cloudinary.uploader
 
 app = Flask(__name__)
+app.secret_key = "asset_tracker_secret_key_2026"
 init_done = False
 # =========================
 # CLOUDINARY
