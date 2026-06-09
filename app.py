@@ -6,7 +6,7 @@ import cloudinary
 import cloudinary.uploader
 
 app = Flask(__name__)
-
+init_done = False
 # =========================
 # CLOUDINARY
 # =========================
@@ -58,6 +58,7 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
+    init_db()
 # =========================
 # ADD ASSET
 # =========================
@@ -409,4 +410,5 @@ def export():
 # RUN
 # =========================
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True)
