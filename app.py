@@ -30,6 +30,7 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
+    # Tabela Assets
     cur.execute("""
         CREATE TABLE IF NOT EXISTS assets (
             id SERIAL PRIMARY KEY,
@@ -44,44 +45,19 @@ def init_db():
         )
     """)
 
+    # Tabela Users
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT
+        )
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
-
-def init_db():
-conn = get_conn()
-cur = conn.cursor()
-
-# Tabela de Assets
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS assets (
-        id SERIAL PRIMARY KEY,
-        asset_id TEXT,
-        depot TEXT,
-        status TEXT,
-        description TEXT,
-        captured_by TEXT,
-        employee_number TEXT,
-        image TEXT,
-        capture_date TIMESTAMP
-    )
-""")
-
-# Tabela de Utilizadores
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT
-    )
-""")
-
-conn.commit()
-cur.close()
-conn.close()
-
-
 # =========================
 # ADD ASSET
 # =========================
