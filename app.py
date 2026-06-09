@@ -58,7 +58,7 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
-    
+init_db()
 # =========================
 # HOME
 # =========================
