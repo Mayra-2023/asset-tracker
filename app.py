@@ -65,6 +65,39 @@ init_db()
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+
+    if request.method == "POST":
+
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        conn = get_conn()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT *
+            FROM users
+            WHERE username=%s
+            AND password=%s
+        """, (username, password))
+
+        user = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        if user:
+            return f"Welcome {username}"
+
+        return "Invalid username or password"
+
+    return render_template("login.html")
+
+
 # =========================
 # ADD ASSET
 # =========================
