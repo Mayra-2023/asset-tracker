@@ -386,6 +386,31 @@ def test_users():
     conn.close()
 
     return str(tables)
+@app.route("/create-admins")
+def create_admins():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    admins = [
+        ("Luis Jeje", "admin123", "admin"),
+        ("Johan Kleinhans", "admin123", "admin"),
+        ("Steve Farrel", "admin123", "admin"),
+        ("Telcidio Savel", "admin123", "admin")
+    ]
+
+    for username, password, role in admins:
+        cur.execute("""
+            INSERT INTO users (username, password, role)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (username) DO NOTHING
+        """, (username, password, role))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return "Admins created successfully"
 # =========================
 # EXPORT CSV
 # =========================
