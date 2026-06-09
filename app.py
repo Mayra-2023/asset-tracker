@@ -97,8 +97,11 @@ def login():
         cur.close()
         conn.close()
 
-        if user:
-            return f"Welcome {username}"
+       if user:
+    session["username"] = user[1]
+    session["role"] = user[3]
+
+    return redirect("/")
 
         return "Invalid username or password"
 
