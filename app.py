@@ -359,6 +359,27 @@ def delete_asset(id):
 
     return redirect(url_for("admin"))
 # =========================
+# TEST USERS TABLE
+# =========================
+@app.route("/test-users")
+def test_users():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema='public'
+    """)
+
+    tables = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return str(tables)
+# =========================
 # EXPORT CSV
 # =========================
 @app.route("/export")
