@@ -48,14 +48,39 @@ def init_db():
     cur.close()
     conn.close()
 
-init_db()
+def init_db():
+conn = get_conn()
+cur = conn.cursor()
 
-# =========================
-# HOME
-# =========================
-@app.route("/")
-def index():
-    return render_template("index.html")
+# Tabela de Assets
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS assets (
+        id SERIAL PRIMARY KEY,
+        asset_id TEXT,
+        depot TEXT,
+        status TEXT,
+        description TEXT,
+        captured_by TEXT,
+        employee_number TEXT,
+        image TEXT,
+        capture_date TIMESTAMP
+    )
+""")
+
+# Tabela de Utilizadores
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT
+    )
+""")
+
+conn.commit()
+cur.close()
+conn.close()
+
 
 # =========================
 # ADD ASSET
