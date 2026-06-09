@@ -386,6 +386,8 @@ def test_users():
     conn.close()
 
     return str(tables)
+
+
 @app.route("/create-admins")
 def create_admins():
 
@@ -411,12 +413,33 @@ def create_admins():
     conn.close()
 
     return "Admins created successfully"
+
+
+@app.route("/list-users")
+def list_users():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, username, role
+        FROM users
+        ORDER BY id
+    """)
+
+    users = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return str(users)
+
+
 # =========================
 # EXPORT CSV
 # =========================
 @app.route("/export")
 def export():
-
     conn = get_conn()
     cur = conn.cursor()
 
