@@ -30,6 +30,12 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
+    ...
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
     # Tabela Assets
     cur.execute("""
         CREATE TABLE IF NOT EXISTS assets (
@@ -58,7 +64,13 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
-    init_db()
+    
+# =========================
+# HOME
+# =========================
+@app.route("/")
+def index():
+    return render_template("index.html")
 # =========================
 # ADD ASSET
 # =========================
