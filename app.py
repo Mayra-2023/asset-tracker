@@ -65,12 +65,10 @@ init_db()
 # =========================
 @app.route("/")
 def index():
-
-    username = session.get("username")
-
     return render_template(
         "index.html",
-        username=username
+        username=session.get("username"),
+        role=session.get("role")
     )
 
 
