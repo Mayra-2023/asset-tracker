@@ -71,7 +71,6 @@ def index():
         role=session.get("role")
     )
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
