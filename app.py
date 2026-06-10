@@ -96,16 +96,13 @@ def login():
         conn.close()
 
         if user:
-
             session["username"] = user[1]
             session["role"] = user[3]
-
             return redirect("/")
 
         return "Invalid username or password"
 
     return render_template("login.html")
-
 # =========================
 # ADD ASSET
 # =========================
