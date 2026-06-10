@@ -4,39 +4,7 @@
     <title>Login</title>
 </head>
 <body>
-@app.route("/login", methods=["GET", "POST"])
-def login():
 
-    if request.method == "POST":
-
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        conn = get_conn()
-        cur = conn.cursor()
-
-        cur.execute("""
-            SELECT *
-            FROM users
-            WHERE username=%s
-            AND password=%s
-        """, (username, password))
-
-        user = cur.fetchone()
-
-        cur.close()
-        conn.close()
-
-        if user:
-
-            session["username"] = user[1]
-            session["role"] = user[3]
-
-            return redirect("/")
-
-        return "Invalid username or password"
-
-    return render_template("login.html")
     <h2>Asset Tracker Login</h2>
 
     <form method="POST">
