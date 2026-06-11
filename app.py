@@ -229,6 +229,25 @@ def updates():
             expired.append(r)
 
     return render_template("updates.html", assets=expired)
+@app.route("/dashboard")
+def dashboard():
+
+    return render_template(
+        "dashboard.html",
+
+        total_assets=0,
+        active_assets=0,
+        repair_assets=0,
+        scrap_assets=0,
+
+        depot_labels=[],
+        depot_values=[],
+
+        status_labels=[],
+        status_values=[],
+
+        depots=[]
+    )
 
 # =========================
 # SUMMARY
