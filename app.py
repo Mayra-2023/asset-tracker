@@ -229,7 +229,8 @@ def updates():
             expired.append(r)
 
     return render_template("updates.html", assets=expired)
-    @app.route("/dashboard")
+
+@app.route("/dashboard")
 def dashboard():
 
     conn = get_db_connection()
