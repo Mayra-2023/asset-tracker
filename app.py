@@ -229,91 +229,92 @@ def updates():
             expired.append(r)
 
     return render_template("updates.html", assets=expired)
-    
-# KPIs
-cur.execute("SELECT COUNT(*) FROM assets")
-total_assets = cur.fetchone()[0]
+    @app.route("/dashboard")
+def dashboard():
 
-cur.execute("""
-    SELECT COUNT(*)
-    FROM assets
-    WHERE LOWER(status)='active'
-""")
-active_assets = cur.fetchone()[0]
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-cur.execute("""
-    SELECT COUNT(*)
-    FROM assets
-    WHERE LOWER(status)='undermaintenance'
-""")
-maintenance_assets = cur.fetchone()[0]
+    # KPIs
+    cur.execute("SELECT COUNT(*) FROM assets")
+    total_assets = cur.fetchone()[0]
 
-cur.execute("""
-    SELECT COUNT(*)
-    FROM assets
-    WHERE LOWER(status)='missing'
-""")
-missing_assets = cur.fetchone()[0]
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE LOWER(status)='active'
+    """)
+    active_assets = cur.fetchone()[0]
 
-cur.execute("""
-    SELECT COUNT(*)
-    FROM assets
-    WHERE LOWER(status)='to be scrapped'
-""")
-to_be_scrapped_assets = cur.fetchone()[0]
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE LOWER(status)='undermaintenance'
+    """)
+    maintenance_assets = cur.fetchone()[0]
 
-cur.execute("""
-    SELECT COUNT(*)
-    FROM assets
-    WHERE LOWER(status)='scrapped'
-""")
-scrapped_assets = cur.fetchone()[0]
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE LOWER(status)='missing'
+    """)
+    missing_assets = cur.fetchone()[0]
 
-# Assets por Depot
-cur.execute("""
-    SELECT depot, COUNT(*)
-    FROM assets
-    GROUP BY depot
-    ORDER BY depot
-""")
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE LOWER(status)='to be scrapped'
+    """)
+    to_be_scrapped_assets = cur.fetchone()[0]
 
-depot_data = cur.fetchall()
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE LOWER(status)='scrapped'
+    """)
+    scrapped_assets = cur.fetchone()[0]
 
-depot_labels = [row[0] for row in depot_data]
-depot_values = [row[1] for row in depot_data]
+    # Assets by Depot
+    cur.execute("""
+        SELECT depot, COUNT(*)
+        FROM assets
+        GROUP BY depot
+        ORDER BY depot
+    """)
+    depot_data = cur.fetchall()
 
-# Assets por Status
-cur.execute("""
-    SELECT status, COUNT(*)
-    FROM assets
-    GROUP BY status
-    ORDER BY status
-""")
+    depot_labels = [row[0] for row in depot_data]
+    depot_values = [row[1] for row in depot_data]
 
-status_data = cur.fetchall()
+    # Assets by Status
+    cur.execute("""
+        SELECT status, COUNT(*)
+        FROM assets
+        GROUP BY status
+        ORDER BY status
+    """)
+    status_data = cur.fetchall()
 
-status_labels = [row[0] for row in status_data]
-status_values = [row[1] for row in status_data]
+    status_labels = [row[0] for row in status_data]
+    status_values = [row[1] for row in status_data]
 
-cur.close()
-conn.close()
+    cur.close()
+    conn.close()
 
-return render_template(
-    "dashboard.html",
+    return render_template(
+        "dashboard.html",
+        total_assets=total_assets,
+        active_assets=active_assets,
+        maintenance_assets=maintenance_assets,
+        missing_assets=missing_assets,
+        to_be_scrapped_assets=to_be_scrapped_assets,
+        scrapped_assets=scrapped_assets,
+        depot_labels=depot_labels,
+        depot_values=depot_values,
+        status_labels=status_labels,
+        status_values=status_values
+    )
 
-    total_assets=total_assets,
-    active_assets=active_assets,
-    maintenance_assets=maintenance_assets,
-    missing_assets=missing_assets,
-    to_be_scrapped_assets=to_be_scrapped_assets,
-    scrapped_assets=scrapped_assets,
-
-    depot_labels=depot_labels,
-    depot_values=depot_values,
-
-    status_labels=status_labels,
-    status_values=status_values
-)
 # =========================
 # SUMMARY
 # =========================
