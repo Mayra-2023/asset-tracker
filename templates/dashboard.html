@@ -1,156 +1,55 @@
-<!DOCTYPE html>
+@app.route("/dashboard")
+def dashboard():
 
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Analytics Dashboard</title>
+    conn = get_conn()
+    cur = conn.cursor()
 
-```
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    # Total
+    cur.execute("SELECT COUNT(*) FROM assets")
+    total_assets = cur.fetchone()[0]
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-```
+    # Status
+    cur.execute("""
+        SELECT status, COUNT(*)
+        FROM assets
+        GROUP BY status
+    """)
+    status_data = cur.fetchall()
 
-</head>
+    status_labels = [row[0] for row in status_data]
+    status_values = [row[1] for row in status_data]
 
-<body class="bg-light">
+    # Depots
+    cur.execute("""
+        SELECT depot, COUNT(*)
+        FROM assets
+        GROUP BY depot
+    """)
+    depot_data = cur.fetchall()
 
-<div class="container-fluid p-4">
+    depot_labels = [row[0] for row in depot_data]
+    depot_values = [row[1] for row in depot_data]
 
-```
-<h2 class="mb-4">
-    Asset Analytics Dashboard
-</h2>
+    # Lista de depots (filtro)
+    depots = [row[0] for row in depot_data]
 
-<div class="row mb-4">
+    # Contadores de exemplo
+    active_assets = sum(v for k,v in zip(status_labels, status_values) if k == "Active")
+    repair_assets = sum(v for k,v in zip(status_labels, status_values) if k == "Under Maintenance")
+    scrap_assets = sum(v for k,v in zip(status_labels, status_values) if k == "Disposed")
 
-    <div class="col-md-3">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6>Total Assets</h6>
-                <h3>{{ total_assets }}</h3>
-            </div>
-        </div>
-    </div>
+    cur.close()
+    conn.close()
 
-    <div class="col-md-3">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6>Active Assets</h6>
-                <h3>{{ active_assets }}</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6>Repair Assets</h6>
-                <h3>{{ repair_assets }}</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6>Scrap Assets</h6>
-                <h3>{{ scrap_assets }}</h3>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div class="row mb-4">
-
-    <div class="col-md-3">
-
-        <label class="form-label">
-            Select Depot
-        </label>
-
-        <select class="form-select">
-            <option>All Depots</option>
-
-            {% for depot in depots %}
-            <option>{{ depot }}</option>
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-</div>
-
-<div class="row">
-
-    <div class="col-md-6">
-
-        <div class="card shadow-sm">
-            <div class="card-header">
-                Assets by Depot
-            </div>
-
-            <div class="card-body">
-                <canvas id="depotChart"></canvas>
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="col-md-6">
-
-        <div class="card shadow-sm">
-            <div class="card-header">
-                Assets by Status
-            </div>
-
-            <div class="card-body">
-                <canvas id="statusChart"></canvas>
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-```
-
-</div>
-
-<script>
-
-const depotChart = new Chart(
-    document.getElementById('depotChart'),
-    {
-        type: 'bar',
-        data: {
-            labels: {{ depot_labels | tojson }},
-            datasets: [{
-                label: 'Assets',
-                data: {{ depot_values | tojson }}
-            }]
-        }
-    }
-);
-
-const statusChart = new Chart(
-    document.getElementById('statusChart'),
-    {
-        type: 'pie',
-        data: {
-            labels: {{ status_labels | tojson }},
-            datasets: [{
-                data: {{ status_values | tojson }}
-            }]
-        }
-    }
-);
-
-</script>
-
-</body>
-</html>
+    return render_template(
+        "dashboard.html",
+        total_assets=total_assets,
+        active_assets=active_assets,
+        repair_assets=repair_assets,
+        scrap_assets=scrap_assets,
+        depot_labels=depot_labels,
+        depot_values=depot_values,
+        status_labels=status_labels,
+        status_values=status_values,
+        depots=depots
+    )
