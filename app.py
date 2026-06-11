@@ -230,63 +230,90 @@ def updates():
 
     return render_template("updates.html", assets=expired)
     
-@app.route("/dashboard")
-def dashboard():
-    conn = get_conn()
-    cur = conn.cursor()
+# KPIs
+cur.execute("SELECT COUNT(*) FROM assets")
+total_assets = cur.fetchone()[0]
 
-    # KPIs
-    cur.execute("SELECT COUNT(*) FROM assets")
-    total_assets = cur.fetchone()[0]
+cur.execute("""
+    SELECT COUNT(*)
+    FROM assets
+    WHERE LOWER(status)='active'
+""")
+active_assets = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM assets WHERE LOWER(status)='active'")
-    active_assets = cur.fetchone()[0]
+cur.execute("""
+    SELECT COUNT(*)
+    FROM assets
+    WHERE LOWER(status)='undermaintenance'
+""")
+maintenance_assets = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM assets WHERE LOWER(status)='repair'")
-    repair_assets = cur.fetchone()[0]
+cur.execute("""
+    SELECT COUNT(*)
+    FROM assets
+    WHERE LOWER(status)='missing'
+""")
+missing_assets = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM assets WHERE LOWER(status)='scrap'")
-    scrap_assets = cur.fetchone()[0]
+cur.execute("""
+    SELECT COUNT(*)
+    FROM assets
+    WHERE LOWER(status)='to be scrapped'
+""")
+to_be_scrapped_assets = cur.fetchone()[0]
 
-    # Assets por Depot
-    cur.execute("""
-        SELECT depot, COUNT(*)
-        FROM assets
-        GROUP BY depot
-        ORDER BY depot
-    """)
-    depot_data = cur.fetchall()
+cur.execute("""
+    SELECT COUNT(*)
+    FROM assets
+    WHERE LOWER(status)='scrapped'
+""")
+scrapped_assets = cur.fetchone()[0]
 
-    depot_labels = [row[0] for row in depot_data]
-    depot_values = [row[1] for row in depot_data]
+# Assets por Depot
+cur.execute("""
+    SELECT depot, COUNT(*)
+    FROM assets
+    GROUP BY depot
+    ORDER BY depot
+""")
 
-    # Assets por Status
-    cur.execute("""
-        SELECT status, COUNT(*)
-        FROM assets
-        GROUP BY status
-        ORDER BY status
-    """)
-    status_data = cur.fetchall()
+depot_data = cur.fetchall()
 
-    status_labels = [row[0] for row in status_data]
-    status_values = [row[1] for row in status_data]
+depot_labels = [row[0] for row in depot_data]
+depot_values = [row[1] for row in depot_data]
 
-    cur.close()
-    conn.close()
+# Assets por Status
+cur.execute("""
+    SELECT status, COUNT(*)
+    FROM assets
+    GROUP BY status
+    ORDER BY status
+""")
 
-    return render_template(
-        "dashboard.html",
-        total_assets=total_assets,
-        active_assets=active_assets,
-        repair_assets=repair_assets,
-        scrap_assets=scrap_assets,
-        depot_labels=depot_labels,
-        depot_values=depot_values,
-        status_labels=status_labels,
-        status_values=status_values
-    )
+status_data = cur.fetchall()
 
+status_labels = [row[0] for row in status_data]
+status_values = [row[1] for row in status_data]
+
+cur.close()
+conn.close()
+
+return render_template(
+    "dashboard.html",
+
+    total_assets=total_assets,
+    active_assets=active_assets,
+    maintenance_assets=maintenance_assets,
+    missing_assets=missing_assets,
+    to_be_scrapped_assets=to_be_scrapped_assets,
+    scrapped_assets=scrapped_assets,
+
+    depot_labels=depot_labels,
+    depot_values=depot_values,
+
+    status_labels=status_labels,
+    status_values=status_values
+)
 # =========================
 # SUMMARY
 # =========================
