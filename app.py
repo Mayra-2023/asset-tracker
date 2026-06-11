@@ -229,24 +229,62 @@ def updates():
             expired.append(r)
 
     return render_template("updates.html", assets=expired)
+    
 @app.route("/dashboard")
 def dashboard():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # KPIs
+    cur.execute("SELECT COUNT(*) FROM assets")
+    total_assets = cur.fetchone()[0]
+
+    cur.execute("SELECT COUNT(*) FROM assets WHERE LOWER(status)='active'")
+    active_assets = cur.fetchone()[0]
+
+    cur.execute("SELECT COUNT(*) FROM assets WHERE LOWER(status)='repair'")
+    repair_assets = cur.fetchone()[0]
+
+    cur.execute("SELECT COUNT(*) FROM assets WHERE LOWER(status)='scrap'")
+    scrap_assets = cur.fetchone()[0]
+
+    # Assets por Depot
+    cur.execute("""
+        SELECT depot, COUNT(*)
+        FROM assets
+        GROUP BY depot
+        ORDER BY depot
+    """)
+    depot_data = cur.fetchall()
+
+    depot_labels = [row[0] for row in depot_data]
+    depot_values = [row[1] for row in depot_data]
+
+    # Assets por Status
+    cur.execute("""
+        SELECT status, COUNT(*)
+        FROM assets
+        GROUP BY status
+        ORDER BY status
+    """)
+    status_data = cur.fetchall()
+
+    status_labels = [row[0] for row in status_data]
+    status_values = [row[1] for row in status_data]
+
+    cur.close()
+    conn.close()
 
     return render_template(
         "dashboard.html",
-
-        total_assets=0,
-        active_assets=0,
-        repair_assets=0,
-        scrap_assets=0,
-
-        depot_labels=[],
-        depot_values=[],
-
-        status_labels=[],
-        status_values=[],
-
-        depots=[]
+        total_assets=total_assets,
+        active_assets=active_assets,
+        repair_assets=repair_assets,
+        scrap_assets=scrap_assets,
+        depot_labels=depot_labels,
+        depot_values=depot_values,
+        status_labels=status_labels,
+        status_values=status_values
     )
 
 # =========================
