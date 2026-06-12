@@ -237,7 +237,12 @@ def dashboard():
     cur = conn.cursor()
 
     selected_depot = request.args.get("depot", "")
-
+if selected_depot:
+    filter_sql = " WHERE depot = %s "
+    filter_params = (selected_depot,)
+else:
+    filter_sql = ""
+    filter_params = ()
     cur.execute("""
         SELECT DISTINCT depot
         FROM assets
