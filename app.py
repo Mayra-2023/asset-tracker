@@ -236,7 +236,17 @@ def dashboard():
     conn = get_conn()
     cur = conn.cursor()
 
-    # KPIs
+    selected_depot = request.args.get("depot", "")
+
+    cur.execute("""
+        SELECT DISTINCT depot
+        FROM assets
+        WHERE depot IS NOT NULL
+        ORDER BY depot
+    """)
+    depots = [row[0] for row in cur.fetchall()]
+
+       # KPIs
     cur.execute("SELECT COUNT(*) FROM assets")
     total_assets = cur.fetchone()[0]
 
@@ -288,12 +298,22 @@ def dashboard():
     depot_values = [row[1] for row in depot_data]
 
     # Assets by Status
-    cur.execute("""
-        SELECT status, COUNT(*)
-        FROM assets
-        GROUP BY status
-        ORDER BY status
-    """)
+    if selected_depot:
+        cur.execute("""
+            SELECT status, COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            GROUP BY status
+            ORDER BY status
+        """, (selected_depot,))
+    else:
+        cur.execute("""
+            SELECT status, COUNT(*)
+            FROM assets
+            GROUP BY status
+            ORDER BY status
+        """)
+
     status_data = cur.fetchall()
 
     status_labels = [row[0] for row in status_data]
@@ -313,7 +333,9 @@ def dashboard():
         depot_labels=depot_labels,
         depot_values=depot_values,
         status_labels=status_labels,
-        status_values=status_values
+        status_values=status_values,
+        depots=depots,
+        selected_depot=selected_depot
     )
 
 # =========================
