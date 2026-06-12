@@ -81,23 +81,36 @@
 
 <!-- FILTER -->
 
+<!-- FILTER -->
+
 <div class="row mb-4">
 
-    <div class="col-md-3">
+    <div class="col-md-4">
 
-        <label class="form-label">
-            Select Depot
-        </label>
+        <form method="GET">
 
-        <select class="form-select">
+            <label class="form-label">
+                Select Depot
+            </label>
 
-            <option>All Depots</option>
+            <select name="depot" class="form-select">
 
-            {% for depot in depots %}
-            <option>{{ depot }}</option>
-            {% endfor %}
+                <option value="">All Depots</option>
 
-        </select>
+                {% for depot in depots %}
+                <option value="{{ depot }}"
+                    {% if depot == selected_depot %}selected{% endif %}>
+                    {{ depot }}
+                </option>
+                {% endfor %}
+
+            </select>
+
+            <button type="submit" class="btn btn-primary mt-2">
+                Filter
+            </button>
+
+        </form>
 
     </div>
 
