@@ -139,9 +139,12 @@
 
         <div class="card shadow-sm">
             <div class="card-header">
-                Assets by Status
-            </div>
-
+    {% if selected_depot %}
+        {{ selected_depot }} - Assets by Status ({{ status_values | sum }})
+    {% else %}
+        Assets by Status ({{ status_values | sum }})
+    {% endif %}
+</div>
             <div class="card-body">
                 <canvas id="statusChart"></canvas>
             </div>
