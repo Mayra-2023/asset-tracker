@@ -233,7 +233,7 @@ def updates():
 @app.route("/dashboard")
 def dashboard():
 
-    conn = get_db_connection()
+    conn = get_conn()
     cur = conn.cursor()
 
     # KPIs
