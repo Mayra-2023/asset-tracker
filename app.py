@@ -430,6 +430,7 @@ def summary():
 # ADMIN PANEL
 # =========================
 @app.route("/admin")
+@admin_required
 def admin():
 
     conn = get_conn()
@@ -454,6 +455,7 @@ def admin():
 # EDIT ASSET
 # =========================
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
+@admin_required
 def edit_asset(id):
 
     conn = get_conn()
@@ -516,6 +518,7 @@ def edit_asset(id):
 # DELETE ASSET
 # =========================
 @app.route("/delete/<int:id>")
+@admin_required
 def delete_asset(id):
 
     conn = get_conn()
