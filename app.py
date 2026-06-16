@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, session, url_for, Response
+from flask import Flask, render_template, request, redirect, session, url_for, Response, abort
+from functools import wraps
 import os
 import psycopg2
 from datetime import datetime
@@ -56,10 +57,24 @@ def init_db():
         )
     """)
 
+...
     conn.commit()
     cur.close()
     conn.close()
+
 init_db()
+
+# =========================
+# ADMIN PROTECTION
+# =========================
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if session.get("role") != "admin":
+            return abort(403)
+        return f(*args, **kwargs)
+    return wrapper
+
 # =========================
 # HOME
 # =========================
@@ -71,7 +86,6 @@ def index():
         username=session.get("username"),
         role=session.get("role")
     )
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
