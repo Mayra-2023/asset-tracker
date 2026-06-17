@@ -307,12 +307,22 @@ def dashboard():
     scrapped_assets = cur.fetchone()[0]
 
     # Assets by Depot
-    cur.execute("""
-        SELECT depot, COUNT(*)
-        FROM assets
-        GROUP BY depot
-        ORDER BY depot
-    """)
+    if selected_depot:
+        cur.execute("""
+            SELECT depot, COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            GROUP BY depot
+            ORDER BY depot
+        """, (selected_depot,))
+    else:
+        cur.execute("""
+            SELECT depot, COUNT(*)
+            FROM assets
+            GROUP BY depot
+            ORDER BY depot
+        """)
+
     depot_data = cur.fetchall()
 
     depot_labels = [row[0] for row in depot_data]
