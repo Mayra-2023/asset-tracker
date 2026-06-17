@@ -243,34 +243,39 @@ def updates():
             expired.append(r)
 
     return render_template("updates.html", assets=expired)
-
 @app.route("/dashboard")
 def dashboard():
+conn = get_conn()
+cur = conn.cursor()
+selected_depot = request.args.get("depot", "")
 
-    conn = get_conn()
-    cur = conn.cursor()
+if selected_depot:
+    cur.execute(
+        "SELECT COUNT(*) FROM assets WHERE depot = %s",
+        (selected_depot,)
+    )
+    depot_total_assets = cur.fetchone()[0]
+else:
+    depot_total_assets = 0
 
-    selected_depot = request.args.get("depot", "")
+if selected_depot:
+    filter_sql = " WHERE depot = %s "
+    filter_params = (selected_depot,)
+else:
+    filter_sql = ""
+    filter_params = ()
 
-    if selected_depot:
-        filter_sql = " WHERE depot = %s "
-        filter_params = (selected_depot,)
-    else:
-        filter_sql = ""
-        filter_params = ()
+cur.execute("""
+    SELECT DISTINCT depot
+    FROM assets
+    WHERE depot IS NOT NULL
+    ORDER BY depot
+""")
+depots = [row[0] for row in cur.fetchall()]
 
-    cur.execute("""
-        SELECT DISTINCT depot
-        FROM assets
-        WHERE depot IS NOT NULL
-        ORDER BY depot
-    """)
-    depots = [row[0] for row in cur.fetchall()]
-
-       # KPIs
-    cur.execute("SELECT COUNT(*) FROM assets")
-    total_assets = cur.fetchone()[0]
-
+# KPIs
+cur.execute("SELECT COUNT(*) FROM assets")
+total_assets = cur.fetchone()[0]
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
