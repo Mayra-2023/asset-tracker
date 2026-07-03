@@ -80,10 +80,11 @@ def admin_required(f):
 
 @app.route("/")
 def index():
-    return f"""
-    Username: {session.get('username')}<br>
-    Role: {session.get('role')}
-    """
+    return render_template(
+        "index.html",
+        username=session.get("username"),
+        role=session.get("role")
+    )
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
