@@ -54,6 +54,51 @@
             min-height:120px;
         }
 
+        .photo-options{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top:10px;
+        }
+
+        .photo-button{
+            flex:1;
+            min-width:200px;
+            padding:14px;
+            color:white;
+            text-align:center;
+            border-radius:8px;
+            cursor:pointer;
+            box-sizing:border-box;
+        }
+
+        .camera-button{
+            background:#28a745;
+        }
+
+        .camera-button:hover{
+            background:#218838;
+        }
+
+        .file-button{
+            background:#007BFF;
+        }
+
+        .file-button:hover{
+            background:#0056b3;
+        }
+
+        .photo-input{
+            display:none;
+        }
+
+        .preview{
+            display:none;
+            width:100%;
+            margin-top:15px;
+            border-radius:8px;
+        }
+
         .btn{
             width:100%;
             padding:14px;
@@ -85,7 +130,7 @@
         .note{
             font-size:13px;
             color:#666;
-            margin-top:5px;
+            margin-top:8px;
         }
     </style>
 </head>
@@ -100,7 +145,9 @@
 
         <form action="/add" method="POST" enctype="multipart/form-data">
 
+            <!-- ASSET ID -->
             <label for="asset_id">Asset ID</label>
+
             <input
                 type="text"
                 id="asset_id"
@@ -108,7 +155,10 @@
                 required
             >
 
+
+            <!-- DEPOT -->
             <label for="depot">Depot</label>
+
             <select
                 id="depot"
                 name="depot"
@@ -122,7 +172,10 @@
                 <option value="Matola">Matola</option>
             </select>
 
+
+            <!-- STATUS -->
             <label for="status">Status</label>
+
             <select
                 id="status"
                 name="status"
@@ -134,11 +187,14 @@
                 <option value="Under Maintenance">Under Maintenance</option>
                 <option value="Damaged">Damaged</option>
                 <option value="Missing">Missing</option>
-                <option value="Disposed">To be scrapped</option>
+                <option value="To be scrapped">To be scrapped</option>
                 <option value="Disposed">Disposed</option>
             </select>
 
+
+            <!-- DESCRIPTION -->
             <label for="description">Asset Description</label>
+
             <textarea
                 id="description"
                 name="description"
@@ -147,7 +203,10 @@
                 placeholder="Describe the asset, model, serial number, condition, location, etc."
             ></textarea>
 
+
+            <!-- CAPTURED BY -->
             <label for="captured_by">Captured By</label>
+
             <input
                 type="text"
                 id="captured_by"
@@ -155,7 +214,10 @@
                 required
             >
 
+
+            <!-- EMPLOYEE NUMBER -->
             <label for="employee_number">Employee Number</label>
+
             <input
                 type="text"
                 id="employee_number"
@@ -163,58 +225,144 @@
                 required
             >
 
-            <label for="image">Asset Photo</label>
 
-<input
-    type="file"
-    id="image"
-    name="image"
-    accept="image/jpeg,image/png,image/jpg"
-    capture="environment"
-    required
->
+            <!-- PHOTO -->
+            <label>Asset Photo</label>
 
-<div class="note">
-    📷 Take a photo with the camera or select an existing photo.
-    <br>
-    Accepted formats: JPG, JPEG, PNG
-</div>
+            <div class="photo-options">
 
-<img
-    id="preview"
-    src=""
-    alt="Photo preview"
-    style="display:none; width:100%; margin-top:15px; border-radius:8px;"
->
+                <!-- CAMERA -->
+                <label
+                    for="cameraInput"
+                    class="photo-button camera-button"
+                >
+                    📷 Take Photo
+                </label>
 
-            <button type="submit" class="btn">
+                <input
+                    type="file"
+                    id="cameraInput"
+                    class="photo-input"
+                    accept="image/jpeg,image/png,image/jpg"
+                    capture="environment"
+                >
+
+
+                <!-- EXISTING FILE -->
+                <label
+                    for="fileInput"
+                    class="photo-button file-button"
+                >
+                    📁 Choose Photo
+                </label>
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    name="image"
+                    class="photo-input"
+                    accept="image/jpeg,image/png,image/jpg"
+                >
+
+            </div>
+
+            <div class="note">
+                📷 Take a new photo with the camera
+                or
+                📁 choose an existing photo.
+                <br>
+                Accepted formats: JPG, JPEG, PNG
+            </div>
+
+
+            <!-- PHOTO PREVIEW -->
+            <img
+                id="preview"
+                class="preview"
+                src=""
+                alt="Photo preview"
+            >
+
+
+            <!-- SAVE -->
+            <button
+                type="submit"
+                class="btn"
+            >
                 Save Asset
             </button>
 
         </form>
 
-        <a href="/" class="back">
+
+        <!-- BACK -->
+        <a
+            href="/"
+            class="back"
+        >
             ← Back to Home
         </a>
 
     </div>
 
 </div>
+
+
+<!-- JAVASCRIPT -->
 <script>
-    const imageInput = document.getElementById("image");
+
+    const cameraInput = document.getElementById("cameraInput");
+    const fileInput = document.getElementById("fileInput");
     const preview = document.getElementById("preview");
 
-    imageInput.addEventListener("change", function () {
 
-        const file = this.files[0];
+    // =========================
+    // TAKE PHOTO
+    // =========================
 
-        if (file) {
-            preview.src = URL.createObjectURL(file);
+    cameraInput.addEventListener("change", function () {
+
+        if (this.files.length > 0) {
+
+            const photo = this.files[0];
+
+            /*
+             * Transfer the camera photo
+             * to the main image input.
+             */
+            const dataTransfer = new DataTransfer();
+
+            dataTransfer.items.add(photo);
+
+            fileInput.files = dataTransfer.files;
+
+
+            // Show preview
+            preview.src = URL.createObjectURL(photo);
+
             preview.style.display = "block";
-        } else {
-            preview.style.display = "none";
         }
     });
+
+
+    // =========================
+    // CHOOSE EXISTING PHOTO
+    // =========================
+
+    fileInput.addEventListener("change", function () {
+
+        if (this.files.length > 0) {
+
+            const photo = this.files[0];
+
+            // Show preview
+            preview.src = URL.createObjectURL(photo);
+
+            preview.style.display = "block";
+        }
+    });
+
 </script>
+
 </body>
 </html>
