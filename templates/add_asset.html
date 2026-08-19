@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Add Asset</title>
 
     <style>
+
         body{
             font-family: Arial, sans-serif;
             background:#f4f4f4;
@@ -69,7 +71,8 @@
             text-align:center;
             border-radius:8px;
             cursor:pointer;
-            box-sizing:border-box;
+            border:none;
+            font-size:16px;
         }
 
         .camera-button{
@@ -92,11 +95,59 @@
             display:none;
         }
 
+        #cameraBox{
+            display:none;
+            margin-top:15px;
+            text-align:center;
+        }
+
+        #cameraVideo{
+            width:100%;
+            max-height:400px;
+            object-fit:cover;
+            border-radius:8px;
+            background:#000;
+        }
+
+        .capture-button{
+            width:100%;
+            padding:14px;
+            margin-top:10px;
+            background:#28a745;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        .capture-button:hover{
+            background:#218838;
+        }
+
+        .close-camera{
+            width:100%;
+            padding:12px;
+            margin-top:8px;
+            background:#6c757d;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+            font-size:15px;
+        }
+
         .preview{
             display:none;
             width:100%;
             margin-top:15px;
             border-radius:8px;
+        }
+
+        .note{
+            font-size:13px;
+            color:#666;
+            margin-top:8px;
         }
 
         .btn{
@@ -127,12 +178,8 @@
             text-decoration:underline;
         }
 
-        .note{
-            font-size:13px;
-            color:#666;
-            margin-top:8px;
-        }
     </style>
+
 </head>
 
 <body>
@@ -143,10 +190,15 @@
 
         <h1>Add Asset</h1>
 
+
         <form action="/add" method="POST" enctype="multipart/form-data">
 
+
             <!-- ASSET ID -->
-            <label for="asset_id">Asset ID</label>
+
+            <label for="asset_id">
+                Asset ID
+            </label>
 
             <input
                 type="text"
@@ -157,43 +209,96 @@
 
 
             <!-- DEPOT -->
-            <label for="depot">Depot</label>
+
+            <label for="depot">
+                Depot
+            </label>
 
             <select
                 id="depot"
                 name="depot"
                 required
             >
-                <option value="">Select Depot</option>
-                <option value="Maragra">Maragra</option>
-                <option value="Xinavane">Xinavane</option>
-                <option value="Mafambisse">Mafambisse</option>
-                <option value="Marromeu">Marromeu</option>
-                <option value="Matola">Matola</option>
+
+                <option value="">
+                    Select Depot
+                </option>
+
+                <option value="Maragra">
+                    Maragra
+                </option>
+
+                <option value="Xinavane">
+                    Xinavane
+                </option>
+
+                <option value="Mafambisse">
+                    Mafambisse
+                </option>
+
+                <option value="Marromeu">
+                    Marromeu
+                </option>
+
+                <option value="Matola">
+                    Matola
+                </option>
+
             </select>
 
 
             <!-- STATUS -->
-            <label for="status">Status</label>
+
+            <label for="status">
+                Status
+            </label>
 
             <select
                 id="status"
                 name="status"
                 required
             >
-                <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Standby">Standby</option>
-                <option value="Under Maintenance">Under Maintenance</option>
-                <option value="Damaged">Damaged</option>
-                <option value="Missing">Missing</option>
-                <option value="To be scrapped">To be scrapped</option>
-                <option value="Disposed">Disposed</option>
+
+                <option value="">
+                    Select Status
+                </option>
+
+                <option value="Active">
+                    Active
+                </option>
+
+                <option value="Standby">
+                    Standby
+                </option>
+
+                <option value="Under Maintenance">
+                    Under Maintenance
+                </option>
+
+                <option value="Damaged">
+                    Damaged
+                </option>
+
+                <option value="Missing">
+                    Missing
+                </option>
+
+                <option value="To be scrapped">
+                    To be scrapped
+                </option>
+
+                <option value="Disposed">
+                    Disposed
+                </option>
+
             </select>
 
 
             <!-- DESCRIPTION -->
-            <label for="description">Asset Description</label>
+
+            <label for="description">
+                Asset Description
+            </label>
 
             <textarea
                 id="description"
@@ -205,7 +310,10 @@
 
 
             <!-- CAPTURED BY -->
-            <label for="captured_by">Captured By</label>
+
+            <label for="captured_by">
+                Captured By
+            </label>
 
             <input
                 type="text"
@@ -216,7 +324,10 @@
 
 
             <!-- EMPLOYEE NUMBER -->
-            <label for="employee_number">Employee Number</label>
+
+            <label for="employee_number">
+                Employee Number
+            </label>
 
             <input
                 type="text"
@@ -227,28 +338,28 @@
 
 
             <!-- PHOTO -->
-            <label>Asset Photo</label>
+
+            <label>
+                Asset Photo
+            </label>
+
 
             <div class="photo-options">
 
-                <!-- CAMERA -->
-                <label
-                    for="cameraInput"
+
+                <!-- CAMERA BUTTON -->
+
+                <button
+                    type="button"
+                    id="openCamera"
                     class="photo-button camera-button"
                 >
                     📷 Take Photo
-                </label>
-
-                <input
-                    type="file"
-                    id="cameraInput"
-                    class="photo-input"
-                    accept="image/jpeg,image/png,image/jpg"
-                    capture="environment"
-                >
+                </button>
 
 
-                <!-- EXISTING FILE -->
+                <!-- FILE BUTTON -->
+
                 <label
                     for="fileInput"
                     class="photo-button file-button"
@@ -266,16 +377,51 @@
 
             </div>
 
+
             <div class="note">
-                📷 Take a new photo with the camera
+
+                📷 Take a new photo using the device camera
                 or
                 📁 choose an existing photo.
+
                 <br>
+
                 Accepted formats: JPG, JPEG, PNG
+
+            </div>
+
+
+            <!-- CAMERA -->
+
+            <div id="cameraBox">
+
+                <video
+                    id="cameraVideo"
+                    autoplay
+                    playsinline
+                ></video>
+
+                <button
+                    type="button"
+                    id="capturePhoto"
+                    class="capture-button"
+                >
+                    📸 Capture Photo
+                </button>
+
+                <button
+                    type="button"
+                    id="closeCamera"
+                    class="close-camera"
+                >
+                    ✕ Close Camera
+                </button>
+
             </div>
 
 
             <!-- PHOTO PREVIEW -->
+
             <img
                 id="preview"
                 class="preview"
@@ -285,6 +431,7 @@
 
 
             <!-- SAVE -->
+
             <button
                 type="submit"
                 class="btn"
@@ -292,10 +439,12 @@
                 Save Asset
             </button>
 
+
         </form>
 
 
         <!-- BACK -->
+
         <a
             href="/"
             class="back"
@@ -308,61 +457,253 @@
 </div>
 
 
-<!-- JAVASCRIPT -->
 <script>
 
-    const cameraInput = document.getElementById("cameraInput");
-    const fileInput = document.getElementById("fileInput");
-    const preview = document.getElementById("preview");
+    // ==========================================
+    // ELEMENTS
+    // ==========================================
+
+    const openCamera =
+        document.getElementById("openCamera");
+
+    const closeCamera =
+        document.getElementById("closeCamera");
+
+    const capturePhoto =
+        document.getElementById("capturePhoto");
+
+    const cameraBox =
+        document.getElementById("cameraBox");
+
+    const cameraVideo =
+        document.getElementById("cameraVideo");
+
+    const fileInput =
+        document.getElementById("fileInput");
+
+    const preview =
+        document.getElementById("preview");
 
 
-    // =========================
-    // TAKE PHOTO
-    // =========================
+    let cameraStream = null;
 
-    cameraInput.addEventListener("change", function () {
 
-        if (this.files.length > 0) {
+    // ==========================================
+    // OPEN CAMERA
+    // ==========================================
 
-            const photo = this.files[0];
+    openCamera.addEventListener("click", async function () {
+
+        try {
+
+            cameraStream =
+                await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: {
+                            ideal: "environment"
+                        }
+                    },
+                    audio: false
+                });
+
+
+            cameraVideo.srcObject =
+                cameraStream;
+
+            cameraBox.style.display =
+                "block";
+
+        }
+
+        catch(error) {
+
+            console.error(
+                "Camera error:",
+                error
+            );
+
+            alert(
+                "Unable to access the camera. Please allow camera permission in your browser."
+            );
+
+        }
+
+    });
+
+
+    // ==========================================
+    // CAPTURE PHOTO
+    // ==========================================
+
+    capturePhoto.addEventListener("click", function () {
+
+        if (!cameraStream) {
+            return;
+        }
+
+
+        const canvas =
+            document.createElement("canvas");
+
+
+        canvas.width =
+            cameraVideo.videoWidth;
+
+        canvas.height =
+            cameraVideo.videoHeight;
+
+
+        const context =
+            canvas.getContext("2d");
+
+
+        context.drawImage(
+            cameraVideo,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        canvas.toBlob(function (blob) {
+
+            if (!blob) {
+                return;
+            }
+
+
+            const file =
+                new File(
+                    [blob],
+                    "asset-photo.jpg",
+                    {
+                        type: "image/jpeg"
+                    }
+                );
+
 
             /*
-             * Transfer the camera photo
-             * to the main image input.
+             * Put the camera photo into
+             * the same input used by Flask.
              */
-            const dataTransfer = new DataTransfer();
 
-            dataTransfer.items.add(photo);
-
-            fileInput.files = dataTransfer.files;
+            const dataTransfer =
+                new DataTransfer();
 
 
-            // Show preview
-            preview.src = URL.createObjectURL(photo);
+            dataTransfer.items.add(file);
 
-            preview.style.display = "block";
-        }
+
+            fileInput.files =
+                dataTransfer.files;
+
+
+            // Preview
+
+            preview.src =
+                URL.createObjectURL(file);
+
+            preview.style.display =
+                "block";
+
+
+            // Close camera
+
+            stopCamera();
+
+
+        }, "image/jpeg", 0.90);
+
     });
 
 
-    // =========================
+    // ==========================================
+    // CLOSE CAMERA
+    // ==========================================
+
+    closeCamera.addEventListener(
+        "click",
+        function () {
+
+            stopCamera();
+
+        }
+    );
+
+
+    // ==========================================
+    // STOP CAMERA
+    // ==========================================
+
+    function stopCamera() {
+
+        if (cameraStream) {
+
+            cameraStream
+                .getTracks()
+                .forEach(function(track) {
+
+                    track.stop();
+
+                });
+
+            cameraStream = null;
+
+        }
+
+
+        cameraVideo.srcObject =
+            null;
+
+        cameraBox.style.display =
+            "none";
+
+    }
+
+
+    // ==========================================
     // CHOOSE EXISTING PHOTO
-    // =========================
+    // ==========================================
 
-    fileInput.addEventListener("change", function () {
+    fileInput.addEventListener(
+        "change",
+        function () {
 
-        if (this.files.length > 0) {
+            if (this.files.length > 0) {
 
-            const photo = this.files[0];
+                const file =
+                    this.files[0];
 
-            // Show preview
-            preview.src = URL.createObjectURL(photo);
 
-            preview.style.display = "block";
+                preview.src =
+                    URL.createObjectURL(file);
+
+
+                preview.style.display =
+                    "block";
+
+            }
+
         }
-    });
+    );
+
+
+    // ==========================================
+    // STOP CAMERA WHEN LEAVING PAGE
+    // ==========================================
+
+    window.addEventListener(
+        "beforeunload",
+        function () {
+
+            stopCamera();
+
+        }
+    );
 
 </script>
+
 
 </body>
 </html>
