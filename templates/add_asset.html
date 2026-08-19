@@ -163,19 +163,29 @@
                 required
             >
 
-            <label for="image">Upload Photo</label>
-            <input
-                type="file"
-                id="image"
-                name="image"
-                accept="image/*"
-                capture="environment"
-                required
-            >
+            <label for="image">Asset Photo</label>
 
-            <div class="note">
-                Accepted formats: JPG, PNG, JPEG
-            </div>
+<input
+    type="file"
+    id="image"
+    name="image"
+    accept="image/jpeg,image/png,image/jpg"
+    capture="environment"
+    required
+>
+
+<div class="note">
+    📷 Take a photo with the camera or select an existing photo.
+    <br>
+    Accepted formats: JPG, JPEG, PNG
+</div>
+
+<img
+    id="preview"
+    src=""
+    alt="Photo preview"
+    style="display:none; width:100%; margin-top:15px; border-radius:8px;"
+>
 
             <button type="submit" class="btn">
                 Save Asset
@@ -190,6 +200,21 @@
     </div>
 
 </div>
+<script>
+    const imageInput = document.getElementById("image");
+    const preview = document.getElementById("preview");
 
+    imageInput.addEventListener("change", function () {
+
+        const file = this.files[0];
+
+        if (file) {
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = "block";
+        } else {
+            preview.style.display = "none";
+        }
+    });
+</script>
 </body>
 </html>
