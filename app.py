@@ -638,7 +638,41 @@ def export():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=assets.csv"}
     )
+# =========================
+# TEST GOOGLE SHEETS
+# =========================
+@app.route("/test-sheets")
+def test_sheets():
 
+    import gspread
+    from google.oauth2.service_account import Credentials
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+
+    credentials = Credentials.from_service_account_file(
+        "/etc/secrets/google-service-account.json",
+        scopes=scopes
+    )
+
+    client = gspread.authorize(credentials)
+
+    spreadsheet = client.open_by_key(
+        "1dahUis5Iba6GkDQ_vXzaXe4drHAgtOcdxfcqe4aVuwE"
+    )
+
+    worksheet = spreadsheet.sheet1
+
+    worksheet.append_row([
+        "TESTE GOOGLE SHEETS",
+        "Render",
+        "Funcionou",
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ])
+
+    return "Google Sheets funcionando!"
 # =========================
 # RUN
 # =========================
