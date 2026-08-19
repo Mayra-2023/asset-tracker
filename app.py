@@ -133,35 +133,99 @@ def add_asset():
 
         image = request.files.get("image")
 
-        upload = cloudinary.uploader.upload(image, folder="asset_tracker")
-        image_url = upload["secure_url"]
+        image_url = ""
+
+        if image and image.filename:
+
+            upload = cloudinary.uploader.upload(
+                image,
+                folder="asset_tracker"
+            )
+
+            image_url = upload["secure_url"]
 
         capture_date = datetime.now()
+
+        # =========================
+        # SAVE TO POSTGRESQL
+        # =========================
 
         conn = get_conn()
         cur = conn.cursor()
 
         cur.execute("""
             INSERT INTO assets (
-                asset_id, depot, status, description,
-                captured_by, employee_number,
-                image, capture_date
+                asset_id,
+                depot,
+                status,
+                description,
+                captured_by,
+                employee_number,
+                image,
+                capture_date
             )
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
-            asset_id, depot, status, description,
-            captured_by, employee_number,
-            image_url, capture_date
+            asset_id,
+            depot,
+            status,
+            description,
+            captured_by,
+            employee_number,
+            image_url,
+            capture_date
         ))
 
         conn.commit()
+
         cur.close()
         conn.close()
+
+        # =========================
+        # SAVE TO GOOGLE SHEETS
+        # =========================
+
+        try:
+
+            import gspread
+            from google.oauth2.service_account import Credentials
+
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"
+            ]
+
+            credentials = Credentials.from_service_account_file(
+                "/etc/secrets/google-service-account.json",
+                scopes=scopes
+            )
+
+            client = gspread.authorize(credentials)
+
+            spreadsheet = client.open_by_key(
+                "1dahUis5Iba6GkDQ_vXzaXe4drHAgtOcdxfcqe4aVuwE"
+            )
+
+            worksheet = spreadsheet.sheet1
+
+            worksheet.append_row([
+                asset_id,
+                depot,
+                status,
+                captured_by,
+                employee_number,
+                image_url,
+                capture_date.strftime("%Y-%m-%d %H:%M:%S"),
+                ""
+            ])
+
+        except Exception as e:
+
+            print("GOOGLE SHEETS ERROR:", e)
 
         return redirect(url_for("index"))
 
     return render_template("add_asset.html")
-
 # =========================
 # SEARCH
 # =========================
