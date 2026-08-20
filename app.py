@@ -1,495 +1,1212 @@
-html
-<!DOCTYPE html>
-<html lang="en">
+from flask import Flask, render_template, request, redirect, session, url_for, Response, abort
+from functools import wraps
+import os
+import csv
+import io
+import psycopg2
+from datetime import datetime
+import cloudinary
+import cloudinary.uploader
 
-<head>
 
-    <meta charset="UTF-8">
+# =========================================================
+# FLASK APPLICATION
+# =========================================================
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+app = Flask(__name__)
 
-    <title>Asset Analytics Dashboard</title>
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "asset_tracker_secret_key_2026"
+)
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+# =========================================================
+# CLOUDINARY
+# =========================================================
 
-</head>
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 
-<body class="bg-light">
+# =========================================================
+# POSTGRESQL CONNECTION
+# =========================================================
 
+def get_conn():
+    return psycopg2.connect(
+        os.environ["DATABASE_URL"]
+    )
 
-<div class="container-fluid p-4">
 
+# =========================================================
+# DATABASE INITIALIZATION
+# =========================================================
 
-    <!-- =========================
-         TITLE
-    ========================== -->
+def init_db():
 
-    <h2 class="mb-4">
-        Asset Analytics Dashboard
-    </h2>
+    conn = get_conn()
+    cur = conn.cursor()
 
+    # -----------------------------------------------------
+    # ASSETS TABLE
+    # -----------------------------------------------------
 
-    <!-- =========================
-         KPI CARDS
-    ========================== -->
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS assets (
+            id SERIAL PRIMARY KEY,
+            asset_id TEXT,
+            depot TEXT,
+            status TEXT,
+            description TEXT,
+            captured_by TEXT,
+            employee_number TEXT,
+            image TEXT,
+            capture_date TIMESTAMP
+        )
+    """)
 
-    <div class="row mb-4">
+    # -----------------------------------------------------
+    # USERS TABLE
+    # -----------------------------------------------------
 
-        <div class="col-md-2">
-            <div class="card shadow-sm border-primary">
-                <div class="card-body text-center">
-                    <h6>Total Assets</h6>
-                    <h3>{{ total_assets }}</h3>
-                </div>
-            </div>
-        </div>
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT
+        )
+    """)
 
+    conn.commit()
 
-        <div class="col-md-2">
-            <div class="card shadow-sm border-success">
-                <div class="card-body text-center">
-                    <h6>Active</h6>
-                    <h3>{{ active_assets }}</h3>
-                </div>
-            </div>
-        </div>
+    cur.close()
+    conn.close()
 
 
-        <div class="col-md-2">
-            <div class="card shadow-sm border-warning">
-                <div class="card-body text-center">
-                    <h6>Maintenance</h6>
-                    <h3>{{ maintenance_assets }}</h3>
-                </div>
-            </div>
-        </div>
+# Initialize database
+init_db()
 
 
-        <div class="col-md-2">
-            <div class="card shadow-sm border-danger">
-                <div class="card-body text-center">
-                    <h6>Missing</h6>
-                    <h3>{{ missing_assets }}</h3>
-                </div>
-            </div>
-        </div>
+# =========================================================
+# ADMIN PROTECTION
+# =========================================================
 
+def admin_required(f):
 
-        <div class="col-md-2">
-            <div class="card shadow-sm border-dark">
-                <div class="card-body text-center">
-                    <h6>To Be Scrapped</h6>
-                    <h3>{{ to_be_scrapped_assets }}</h3>
-                </div>
-            </div>
-        </div>
+    @wraps(f)
+    def wrapper(*args, **kwargs):
 
+        if session.get("role") != "admin":
+            return abort(403)
 
-        <div class="col-md-2">
-            <div class="card shadow-sm border-secondary">
-                <div class="card-body text-center">
-                    <h6>Scrapped</h6>
-                    <h3>{{ scrapped_assets }}</h3>
-                </div>
-            </div>
-        </div>
+        return f(*args, **kwargs)
 
-    </div>
+    return wrapper
 
 
-    <!-- =========================
-         DEPOT FILTER
-    ========================== -->
+# =========================================================
+# HOME
+# =========================================================
 
-    <div class="row mb-4">
+@app.route("/")
+def index():
 
-        <div class="col-md-4">
+    return render_template(
+        "index.html",
+        username=session.get("username"),
+        role=session.get("role")
+    )
 
-            <form method="GET">
 
-                <label class="form-label">
-                    Select Depot
-                </label>
+# =========================================================
+# LOGIN
+# =========================================================
 
-                <select
-                    name="depot"
-                    class="form-select"
-                >
+@app.route("/login", methods=["GET", "POST"])
+def login():
 
-                    <option value="">
-                        All Depots
-                    </option>
+    if request.method == "POST":
 
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
 
-                    {% for depot in depots %}
+        conn = get_conn()
+        cur = conn.cursor()
 
-                    <option
-                        value="{{ depot }}"
-                        {% if depot == selected_depot %}
-                        selected
-                        {% endif %}
-                    >
-                        {{ depot }}
-                    </option>
+        cur.execute("""
+            SELECT *
+            FROM users
+            WHERE username = %s
+            AND password = %s
+        """, (
+            username,
+            password
+        ))
 
-                    {% endfor %}
+        user = cur.fetchone()
 
-                </select>
+        cur.close()
+        conn.close()
 
+        if user:
 
-                <button
-                    type="submit"
-                    class="btn btn-primary mt-2"
-                >
-                    Filter
-                </button>
+            session["username"] = user[1]
+            session["role"] = user[3]
 
-            </form>
+            return redirect(url_for("index"))
 
-        </div>
+        return "Invalid username or password"
 
-    </div>
+    return render_template("login.html")
 
 
-    <!-- =========================
-         CHARTS
-    ========================== -->
+# =========================================================
+# LOGOUT
+# =========================================================
 
-    <div class="row">
+@app.route("/logout")
+def logout():
 
+    session.clear()
 
-        <!-- DEPOT CHART -->
+    return redirect(url_for("index"))
 
-        <div class="col-md-6">
 
-            <div class="card shadow-sm">
+# =========================================================
+# ADD ASSET
+# =========================================================
 
-                <div class="card-header">
-                    Assets by Depot
-                </div>
+@app.route("/add", methods=["GET", "POST"])
+def add_asset():
 
-                <div class="card-body">
+    if request.method == "POST":
 
-                    <canvas id="depotChart"></canvas>
+        asset_id = request.form.get("asset_id", "").strip()
+        depot = request.form.get("depot", "").strip()
+        status = request.form.get("status", "").strip()
+        description = request.form.get("description", "").strip()
+        captured_by = request.form.get("captured_by", "").strip()
+        employee_number = request.form.get("employee_number", "").strip()
 
-                </div>
+        image = request.files.get("image")
 
-            </div>
+        image_url = ""
 
-        </div>
+        # -------------------------------------------------
+        # UPLOAD IMAGE TO CLOUDINARY
+        # -------------------------------------------------
 
+        if image and image.filename:
 
-        <!-- STATUS CHART -->
+            upload = cloudinary.uploader.upload(
+                image,
+                folder="asset_tracker"
+            )
 
-        <div class="col-md-6">
+            image_url = upload.get("secure_url", "")
 
-            <div class="card shadow-sm">
+        capture_date = datetime.now()
 
-                <div class="card-header">
+        # -------------------------------------------------
+        # SAVE ASSET TO POSTGRESQL
+        # -------------------------------------------------
 
-                    {% if selected_depot %}
+        conn = get_conn()
+        cur = conn.cursor()
 
-                        {{ selected_depot }} - Assets by Status
+        cur.execute("""
+            INSERT INTO assets (
+                asset_id,
+                depot,
+                status,
+                description,
+                captured_by,
+                employee_number,
+                image,
+                capture_date
+            )
+            VALUES (
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
+            )
+        """, (
+            asset_id,
+            depot,
+            status,
+            description,
+            captured_by,
+            employee_number,
+            image_url,
+            capture_date
+        ))
 
-                    {% else %}
+        conn.commit()
 
-                        Assets by Status
+        cur.close()
+        conn.close()
 
-                    {% endif %}
+        # -------------------------------------------------
+        # SAVE TO GOOGLE SHEETS
+        # -------------------------------------------------
 
-                </div>
+        try:
 
+            import gspread
+            from google.oauth2.service_account import Credentials
 
-                <div class="card-body">
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"
+            ]
 
-                    <canvas id="statusChart"></canvas>
+            credentials = Credentials.from_service_account_file(
+                "/etc/secrets/google-service-account.json",
+                scopes=scopes
+            )
 
-                </div>
+            client = gspread.authorize(credentials)
 
-            </div>
+            spreadsheet = client.open_by_key(
+                "1dahUis5Iba6GkDQ_vXzaXe4drHAgtOcdxfcqe4aVuwE"
+            )
 
-        </div>
+            worksheet = spreadsheet.sheet1
 
-    </div>
+            worksheet.append_row([
+                asset_id,
+                depot,
+                status,
+                description,
+                captured_by,
+                employee_number,
+                capture_date.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+                image_url,
+                "",
+                "",
+                "",
+                capture_date.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            ])
 
+        except Exception as e:
 
-    <!-- =========================
-         RECENT ASSETS
-    ========================== -->
+            print(
+                "GOOGLE SHEETS ERROR:",
+                e
+            )
 
-    <div class="card shadow-sm mt-4">
+        return redirect(url_for("index"))
 
-        <div class="card-header">
-            Recent Assets
-        </div>
+    return render_template("add_asset.html")
 
 
-        <div class="card-body">
+# =========================================================
+# SEARCH ASSET
+# =========================================================
 
-            {% if recent_assets %}
+@app.route("/search", methods=["GET", "POST"])
+def search():
 
-            <div class="table-responsive">
+    asset = None
+    verification_status = None
+    update_required = False
 
-                <table class="table table-striped table-hover">
+    if request.method == "POST":
 
-                    <thead>
+        asset_id = request.form.get(
+            "asset_id",
+            ""
+        ).strip()
 
-                        <tr>
+        conn = get_conn()
+        cur = conn.cursor()
 
-                            <th>Asset ID</th>
+        cur.execute("""
+            SELECT *
+            FROM assets
+            WHERE asset_id = %s
+            ORDER BY id DESC
+            LIMIT 1
+        """, (
+            asset_id,
+        ))
 
-                            <th>Depot</th>
+        row = cur.fetchone()
 
-                            <th>Status</th>
+        cur.close()
+        conn.close()
 
-                            <th>Captured By</th>
+        if row:
 
-                            <th>Capture Date</th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        {% for asset in recent_assets %}
-
-                        <tr>
-
-                            <td>
-                                {{ asset[0] }}
-                            </td>
-
-                            <td>
-                                {{ asset[1] }}
-                            </td>
-
-                            <td>
-                                {{ asset[2] }}
-                            </td>
-
-                            <td>
-                                {{ asset[3] }}
-                            </td>
-
-                            <td>
-                                {{ asset[4] }}
-                            </td>
-
-                        </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            {% else %}
-
-                <p class="text-muted mb-0">
-                    No assets found.
-                </p>
-
-            {% endif %}
-
-        </div>
-
-    </div>
-
-
-</div>
-
-
-<!-- =========================
-     CHART JAVASCRIPT
-========================== -->
-
-<script>
-
-
-/* =========================
-   DEPOT CHART
-========================= */
-
-const depotLabels = {{ depot_labels | tojson }};
-
-const depotValues = {{ depot_values | tojson }};
-
-
-const depotCanvas =
-    document.getElementById('depotChart');
-
-
-if (depotCanvas) {
-
-    new Chart(
-        depotCanvas,
-        {
-            type: 'bar',
-
-            data: {
-
-                labels: depotLabels,
-
-                datasets: [{
-
-                    label: 'Assets',
-
-                    data: depotValues,
-
-                    backgroundColor: [
-                        '#0d6efd',
-                        '#198754',
-                        '#dc3545',
-                        '#ffc107',
-                        '#6f42c1',
-                        '#20c997',
-                        '#fd7e14',
-                        '#6c757d'
-                    ],
-
-                    borderWidth: 1
-
-                }]
-
-            },
-
-
-            options: {
-
-                responsive: true,
-
-                plugins: {
-
-                    legend: {
-                        display: false
-                    }
-
-                },
-
-                scales: {
-
-                    y: {
-
-                        beginAtZero: true,
-
-                        ticks: {
-                            precision: 0
-                        }
-
-                    }
-
-                }
-
+            asset = {
+                "id": row[0],
+                "asset_id": row[1],
+                "depot": row[2],
+                "status": row[3],
+                "description": row[4],
+                "captured_by": row[5],
+                "employee_number": row[6],
+                "image": row[7],
+                "capture_date": row[8]
             }
 
+            if row[8]:
+
+                days = (
+                    datetime.now() - row[8]
+                ).days
+
+            else:
+
+                days = 999999
+
+            if row[3] == "Missing":
+
+                verification_status = "Missing"
+
+            elif days <= 180:
+
+                verification_status = "Verified"
+
+            else:
+
+                verification_status = "Overdue"
+                update_required = True
+
+    return render_template(
+        "search.html",
+        asset=asset,
+        verification_status=verification_status,
+        update_required=update_required
+    )
+
+
+# =========================================================
+# UPDATES REQUIRED
+# =========================================================
+
+@app.route("/updates")
+def updates():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM assets
+        ORDER BY capture_date DESC
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    expired = []
+
+    for row in rows:
+
+        if not row[8]:
+            continue
+
+        days = (
+            datetime.now() - row[8]
+        ).days
+
+        if days >= 180:
+
+            expired.append(row)
+
+    return render_template(
+        "updates.html",
+        assets=expired
+    )
+
+
+# =========================================================
+# DASHBOARD
+# =========================================================
+
+@app.route("/dashboard")
+def dashboard():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # -----------------------------------------------------
+    # SELECTED DEPOT
+    # -----------------------------------------------------
+
+    selected_depot = request.args.get(
+        "depot",
+        ""
+    ).strip()
+
+    # -----------------------------------------------------
+    # LIST OF DEPOTS
+    # -----------------------------------------------------
+
+    cur.execute("""
+        SELECT DISTINCT depot
+        FROM assets
+        WHERE depot IS NOT NULL
+        AND depot <> ''
+        ORDER BY depot
+    """)
+
+    depots = [
+        row[0]
+        for row in cur.fetchall()
+    ]
+
+    # -----------------------------------------------------
+    # DEPOT FILTER
+    # -----------------------------------------------------
+
+    if selected_depot:
+
+        depot_filter = """
+            WHERE depot = %s
+        """
+
+        params = (
+            selected_depot,
+        )
+
+    else:
+
+        depot_filter = ""
+
+        params = ()
+
+    # -----------------------------------------------------
+    # TOTAL ASSETS
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        """,
+        params
+    )
+
+    total_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # ACTIVE
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(TRIM(status)) = 'active'
+        """,
+        params
+    )
+
+    active_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # UNDER MAINTENANCE
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(TRIM(status)) = 'under maintenance'
+        """,
+        params
+    )
+
+    maintenance_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # MISSING
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(TRIM(status)) = 'missing'
+        """,
+        params
+    )
+
+    missing_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # TO BE SCRAPPED
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(TRIM(status)) = 'to be scrapped'
+        """,
+        params
+    )
+
+    to_be_scrapped_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # SCRAPPED
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(TRIM(status)) = 'scrapped'
+        """,
+        params
+    )
+
+    scrapped_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # STATUS SUMMARY
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT
+            COALESCE(status, 'Unknown') AS status,
+            COUNT(*)
+        FROM assets
+        {depot_filter}
+        GROUP BY status
+        ORDER BY status
+        """,
+        params
+    )
+
+    status_rows = cur.fetchall()
+
+    # -----------------------------------------------------
+    # STATUS CHART DATA
+    # -----------------------------------------------------
+
+    status_labels = [
+        row[0]
+        for row in status_rows
+    ]
+
+    status_values = [
+        row[1]
+        for row in status_rows
+    ]
+
+    # -----------------------------------------------------
+    # DEPOT CHART
+    # -----------------------------------------------------
+
+    if selected_depot:
+
+        depot_labels = [
+            selected_depot
+        ]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+        """, (
+            selected_depot,
+        ))
+
+        depot_values = [
+            cur.fetchone()[0]
+        ]
+
+    else:
+
+        cur.execute("""
+            SELECT
+                depot,
+                COUNT(*)
+            FROM assets
+            WHERE depot IS NOT NULL
+            AND depot <> ''
+            GROUP BY depot
+            ORDER BY depot
+        """)
+
+        depot_chart_rows = cur.fetchall()
+
+        depot_labels = [
+            row[0]
+            for row in depot_chart_rows
+        ]
+
+        depot_values = [
+            row[1]
+            for row in depot_chart_rows
+        ]
+
+    # -----------------------------------------------------
+    # RECENT ASSETS
+    # -----------------------------------------------------
+
+    cur.execute(
+        f"""
+        SELECT
+            asset_id,
+            depot,
+            status,
+            captured_by,
+            capture_date
+        FROM assets
+        {depot_filter}
+        ORDER BY capture_date DESC
+        LIMIT 10
+        """,
+        params
+    )
+
+    recent_assets = cur.fetchall()
+
+    # -----------------------------------------------------
+    # CLOSE DATABASE
+    # -----------------------------------------------------
+
+    cur.close()
+    conn.close()
+
+    # -----------------------------------------------------
+    # RENDER DASHBOARD
+    # -----------------------------------------------------
+
+    return render_template(
+        "dashboard.html",
+
+        # Filter
+        selected_depot=selected_depot,
+        depots=depots,
+
+        # KPIs
+        total_assets=total_assets,
+        active_assets=active_assets,
+        maintenance_assets=maintenance_assets,
+        missing_assets=missing_assets,
+        to_be_scrapped_assets=to_be_scrapped_assets,
+        scrapped_assets=scrapped_assets,
+
+        # Status
+        status_rows=status_rows,
+        status_labels=status_labels,
+        status_values=status_values,
+
+        # Depot chart
+        depot_labels=depot_labels,
+        depot_values=depot_values,
+
+        # Recent assets
+        recent_assets=recent_assets
+    )
+
+
+# =========================================================
+# SUMMARY
+# =========================================================
+
+@app.route("/summary")
+def summary():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # -----------------------------------------------------
+    # TOTAL ASSETS
+    # -----------------------------------------------------
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+    """)
+
+    total_assets = cur.fetchone()[0]
+
+    # -----------------------------------------------------
+    # STATUS COUNTS
+    # -----------------------------------------------------
+
+    cur.execute("""
+        SELECT
+            status,
+            COUNT(*)
+        FROM assets
+        GROUP BY status
+    """)
+
+    status_rows = cur.fetchall()
+
+    stats = {
+        "Active": 0,
+        "Standby": 0,
+        "Under Maintenance": 0,
+        "Damaged": 0,
+        "Missing": 0,
+        "Disposed": 0
+    }
+
+    for status, count in status_rows:
+
+        if status in stats:
+
+            stats[status] = count
+
+    # -----------------------------------------------------
+    # ASSETS BY DEPOT
+    # -----------------------------------------------------
+
+    cur.execute("""
+        SELECT
+            depot,
+            COUNT(*)
+        FROM assets
+        GROUP BY depot
+        ORDER BY depot
+    """)
+
+    depot_rows = cur.fetchall()
+
+    # -----------------------------------------------------
+    # RECENT ASSETS
+    # -----------------------------------------------------
+
+    cur.execute("""
+        SELECT
+            asset_id,
+            depot,
+            status,
+            captured_by,
+            capture_date
+        FROM assets
+        ORDER BY capture_date DESC
+        LIMIT 10
+    """)
+
+    recent_assets = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "summary.html",
+        total_assets=total_assets,
+        stats=stats,
+        depot_rows=depot_rows,
+        recent_assets=recent_assets
+    )
+
+
+# =========================================================
+# ADMIN PANEL
+# =========================================================
+
+@app.route("/admin")
+@admin_required
+def admin():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM assets
+        ORDER BY capture_date DESC
+    """)
+
+    assets = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "admin.html",
+        assets=assets
+    )
+
+
+# =========================================================
+# EDIT ASSET
+# =========================================================
+
+@app.route(
+    "/edit/<int:id>",
+    methods=["GET", "POST"]
+)
+@admin_required
+def edit_asset(id):
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    if request.method == "POST":
+
+        asset_id = request.form.get(
+            "asset_id",
+            ""
+        ).strip()
+
+        depot = request.form.get(
+            "depot",
+            ""
+        ).strip()
+
+        status = request.form.get(
+            "status",
+            ""
+        ).strip()
+
+        description = request.form.get(
+            "description",
+            ""
+        ).strip()
+
+        captured_by = request.form.get(
+            "captured_by",
+            ""
+        ).strip()
+
+        employee_number = request.form.get(
+            "employee_number",
+            ""
+        ).strip()
+
+        cur.execute("""
+            UPDATE assets
+            SET
+                asset_id = %s,
+                depot = %s,
+                status = %s,
+                description = %s,
+                captured_by = %s,
+                employee_number = %s
+            WHERE id = %s
+        """, (
+            asset_id,
+            depot,
+            status,
+            description,
+            captured_by,
+            employee_number,
+            id
+        ))
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        return redirect(
+            url_for("admin")
+        )
+
+    cur.execute("""
+        SELECT *
+        FROM assets
+        WHERE id = %s
+    """, (
+        id,
+    ))
+
+    asset = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if not asset:
+
+        return "Asset not found", 404
+
+    return render_template(
+        "edit_asset.html",
+        asset=asset
+    )
+
+
+# =========================================================
+# DELETE ASSET
+# =========================================================
+
+@app.route("/delete/<int:id>")
+@admin_required
+def delete_asset(id):
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM assets
+        WHERE id = %s
+    """, (
+        id,
+    ))
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return redirect(
+        url_for("admin")
+    )
+
+
+# =========================================================
+# TEST USERS TABLE
+# =========================================================
+
+@app.route("/test-users")
+def test_users():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+    """)
+
+    tables = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return str(tables)
+
+
+# =========================================================
+# CREATE ADMINS
+# =========================================================
+
+@app.route("/create-admins")
+def create_admins():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    admins = [
+        (
+            "Luis Jeje",
+            "admin123",
+            "admin"
+        ),
+        (
+            "Johan Kleinhans",
+            "admin123",
+            "admin"
+        ),
+        (
+            "Steve Farrel",
+            "admin123",
+            "admin"
+        ),
+        (
+            "Telcidio Savel",
+            "admin123",
+            "admin"
+        )
+    ]
+
+    for username, password, role in admins:
+
+        cur.execute("""
+            INSERT INTO users (
+                username,
+                password,
+                role
+            )
+            VALUES (
+                %s,
+                %s,
+                %s
+            )
+            ON CONFLICT (username)
+            DO NOTHING
+        """, (
+            username,
+            password,
+            role
+        ))
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return "Admins created successfully"
+
+
+# =========================================================
+# LIST USERS
+# =========================================================
+
+@app.route("/list-users")
+def list_users():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            id,
+            username,
+            role
+        FROM users
+        ORDER BY id
+    """)
+
+    users = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return str(users)
+
+
+# =========================================================
+# EXPORT CSV
+# =========================================================
+
+@app.route("/export")
+def export():
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM assets
+        ORDER BY id
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    output = io.StringIO()
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "asset_id",
+        "depot",
+        "status",
+        "description",
+        "captured_by",
+        "employee_number",
+        "image",
+        "capture_date"
+    ])
+
+    for row in rows:
+
+        writer.writerow(row)
+
+    csv_data = output.getvalue()
+
+    output.close()
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition":
+                "attachment; filename=assets.csv"
         }
-    );
-
-}
+    )
 
 
-/* =========================
-   STATUS CHART
-========================= */
+# =========================================================
+# TEST GOOGLE SHEETS
+# =========================================================
 
-const statusLabels = {{ status_labels | tojson }};
+@app.route("/test-sheets")
+def test_sheets():
 
-const statusValues = {{ status_values | tojson }};
+    import gspread
+    from google.oauth2.service_account import Credentials
 
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
-const statusCanvas =
-    document.getElementById('statusChart');
+    credentials = Credentials.from_service_account_file(
+        "/etc/secrets/google-service-account.json",
+        scopes=scopes
+    )
 
+    client = gspread.authorize(
+        credentials
+    )
 
-if (statusCanvas) {
+    spreadsheet = client.open_by_key(
+        "1dahUis5Iba6GkDQ_vXzaXe4drHAgtOcdxfcqe4aVuwE"
+    )
 
-    new Chart(
-        statusCanvas,
-        {
-            type: 'pie',
+    worksheet = spreadsheet.sheet1
 
-            data: {
+    worksheet.append_row([
+        "TESTE GOOGLE SHEETS",
+        "Render",
+        "Funcionou",
+        datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+    ])
 
-                labels: statusLabels,
-
-                datasets: [{
-
-                    data: statusValues,
-
-                    backgroundColor: [
-                        '#198754',
-                        '#ffc107',
-                        '#dc3545',
-                        '#0d6efd',
-                        '#6f42c1',
-                        '#6c757d',
-                        '#20c997',
-                        '#fd7e14'
-                    ]
-
-                }]
-
-            },
+    return "Google Sheets funcionando!"
 
 
-            options: {
+# =========================================================
+# APPLICATION START
+# =========================================================
 
-                responsive: true,
+if __name__ == "__main__":
 
-                plugins: {
-
-                    legend: {
-                        position: 'bottom'
-                    }
-
-                }
-
-            }
-
-        }
-    );
-
-}
-
-
-</script>
-
-
-<!-- =========================
-     BACK TO HOME
-========================== -->
-
-<div style="text-align:center; margin:30px 0;">
-
-    <a
-        href="/"
-        style="
-            display:inline-block;
-            padding:12px 24px;
-            background:#007BFF;
-            color:white;
-            text-decoration:none;
-            border-radius:8px;
-            font-size:16px;
-        "
-    >
-        ← Back to Home
-    </a>
-
-</div>
-
-
-</body>
-
-</html>
-```
+    app.run(
+        host="0.0.0.0",
+        port=int(
+            os.environ.get(
+                "PORT",
+                5000
+            )
+        )
+    )
