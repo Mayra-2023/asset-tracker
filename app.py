@@ -1,3 +1,4 @@
+```python
 from flask import Flask, render_template, request, redirect, session, url_for, Response, abort
 from functools import wraps
 import os
@@ -8,7 +9,6 @@ import cloudinary.uploader
 
 app = Flask(__name__)
 app.secret_key = "asset_tracker_secret_key_2026"
-init_done = False
 
 # =========================
 # CLOUDINARY
@@ -38,7 +38,6 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
-    # Tabela Assets
     cur.execute("""
         CREATE TABLE IF NOT EXISTS assets (
             id SERIAL PRIMARY KEY,
@@ -53,7 +52,6 @@ def init_db():
         )
     """)
 
-    # Tabela Users
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -304,20 +302,22 @@ def search():
                 "capture_date": row[8],
             }
 
-            days = (datetime.now() - row[8]).days
+            if row[8]:
 
-            if row[3] == "Missing":
+                days = (datetime.now() - row[8]).days
 
-                verification_status = "Missing"
+                if row[3] == "Missing":
 
-            elif days <= 180:
+                    verification_status = "Missing"
 
-                verification_status = "Verified"
+                elif days <= 180:
 
-            else:
+                    verification_status = "Verified"
 
-                verification_status = "Overdue"
-                update_required = True
+                else:
+
+                    verification_status = "Overdue"
+                    update_required = True
 
     return render_template(
         "search.html",
@@ -348,8 +348,10 @@ def updates():
 
     for r in rows:
 
-        if (datetime.now() - r[8]).days >= 180:
-            expired.append(r)
+        if r[8]:
+
+            if (datetime.now() - r[8]).days >= 180:
+                expired.append(r)
 
     return render_template(
         "updates.html",
@@ -360,6 +362,7 @@ def updates():
 # =========================
 # DASHBOARD
 # =========================
+
 @app.route("/dashboard")
 def dashboard():
 
@@ -369,11 +372,13 @@ def dashboard():
     # =========================
     # DEPOT SELECTION
     # =========================
+
     selected_depot = request.args.get("depot", "").strip()
 
     # =========================
     # LIST OF DEPOTS
     # =========================
+
     cur.execute("""
         SELECT DISTINCT depot
         FROM assets
@@ -387,16 +392,21 @@ def dashboard():
     # =========================
     # BASE FILTER
     # =========================
+
     if selected_depot:
+
         depot_filter = "WHERE depot = %s"
         params = (selected_depot,)
+
     else:
+
         depot_filter = ""
         params = ()
 
     # =========================
     # TOTAL ASSETS
     # =========================
+
     cur.execute(
         f"""
         SELECT COUNT(*)
@@ -411,6 +421,7 @@ def dashboard():
     # =========================
     # ACTIVE
     # =========================
+
     cur.execute(
         f"""
         SELECT COUNT(*)
@@ -427,6 +438,7 @@ def dashboard():
     # =========================
     # UNDER MAINTENANCE
     # =========================
+
     cur.execute(
         f"""
         SELECT COUNT(*)
@@ -443,6 +455,7 @@ def dashboard():
     # =========================
     # MISSING
     # =========================
+
     cur.execute(
         f"""
         SELECT COUNT(*)
@@ -459,6 +472,7 @@ def dashboard():
     # =========================
     # TO BE SCRAPPED
     # =========================
+
     cur.execute(
         f"""
         SELECT COUNT(*)
@@ -475,6 +489,7 @@ def dashboard():
     # =========================
     # SCRAPPED
     # =========================
+
     cur.execute(
         f"""
         SELECT COUNT(*)
@@ -491,6 +506,7 @@ def dashboard():
     # =========================
     # STATUS SUMMARY
     # =========================
+
     cur.execute(
         f"""
         SELECT status, COUNT(*)
@@ -505,13 +521,19 @@ def dashboard():
     status_rows = cur.fetchall()
 
     # =========================
-    # DEPOT CHART
+    # STATUS CHART DATA
     # =========================
-    # Without a selected depot:
-    # show all depots.
-    #
-    # With a selected depot:
-    # show only the selected depot.
+
+    status_labels = []
+    status_values = []
+
+    for row in status_rows:
+
+        status_labels.append(row[0] if row[0] else "Unknown")
+        status_values.append(row[1])
+
+    # =========================
+    # DEPOT CHART
     # =========================
 
     if selected_depot:
@@ -545,6 +567,7 @@ def dashboard():
     # =========================
     # RECENT ASSETS
     # =========================
+
     cur.execute(
         f"""
         SELECT asset_id,
@@ -565,12 +588,14 @@ def dashboard():
     # =========================
     # CLOSE CONNECTION
     # =========================
+
     cur.close()
     conn.close()
 
     # =========================
     # RENDER DASHBOARD
     # =========================
+
     return render_template(
         "dashboard.html",
 
@@ -588,6 +613,8 @@ def dashboard():
 
         # Status
         status_rows=status_rows,
+        status_labels=status_labels,
+        status_values=status_values,
 
         # Depot chart
         depot_labels=depot_labels,
@@ -596,6 +623,8 @@ def dashboard():
         # Recent assets
         recent_assets=recent_assets
     )
+
+
 # =========================
 # SUMMARY
 # =========================
@@ -606,16 +635,12 @@ def summary():
     conn = get_conn()
     cur = conn.cursor()
 
-    # Total Assets
-
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
     """)
 
     total_assets = cur.fetchone()[0]
-
-    # Totais por Status
 
     cur.execute("""
         SELECT status, COUNT(*)
@@ -639,8 +664,6 @@ def summary():
         if status in stats:
             stats[status] = count
 
-    # Assets por Depot
-
     cur.execute("""
         SELECT depot, COUNT(*)
         FROM assets
@@ -649,8 +672,6 @@ def summary():
     """)
 
     depot_rows = cur.fetchall()
-
-    # Últimos 10 ativos
 
     cur.execute("""
         SELECT
@@ -953,9 +974,7 @@ def test_sheets():
         "TESTE GOOGLE SHEETS",
         "Render",
         "Funcionou",
-        datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ])
 
     return "Google Sheets funcionando!"
@@ -973,3 +992,4 @@ if __name__ == "__main__":
             os.environ.get("PORT", 5000)
         )
     )
+```
