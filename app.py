@@ -209,15 +209,19 @@ def add_asset():
             worksheet = spreadsheet.sheet1
 
             worksheet.append_row([
-                asset_id,
-                depot,
-                status,
-                captured_by,
-                employee_number,
-                image_url,
-                capture_date.strftime("%Y-%m-%d %H:%M:%S"),
-                ""
-            ])
+    asset_id,
+    depot,
+    status,
+    description,
+    captured_by,
+    employee_number,
+    capture_date.strftime("%Y-%m-%d %H:%M:%S"),
+    image_url,
+    "",
+    "",
+    "",
+    capture_date.strftime("%Y-%m-%d %H:%M:%S")
+])
 
         except Exception as e:
 
