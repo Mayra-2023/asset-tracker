@@ -360,201 +360,242 @@ def updates():
 # =========================
 # DASHBOARD
 # =========================
-
 @app.route("/dashboard")
 def dashboard():
 
     conn = get_conn()
     cur = conn.cursor()
 
-    selected_depot = request.args.get("depot", "")
+    # =========================
+    # DEPOT SELECTION
+    # =========================
+    selected_depot = request.args.get("depot", "").strip()
 
     # =========================
-    # DEPOTS
+    # LIST OF DEPOTS
     # =========================
-
     cur.execute("""
         SELECT DISTINCT depot
         FROM assets
         WHERE depot IS NOT NULL
+        AND depot <> ''
         ORDER BY depot
     """)
 
     depots = [row[0] for row in cur.fetchall()]
 
     # =========================
-    # KPIs
+    # BASE FILTER
     # =========================
-
     if selected_depot:
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE depot = %s
-        """, (selected_depot,))
-
-        total_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            AND LOWER(status) = 'active'
-        """, (selected_depot,))
-
-        active_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            AND LOWER(status) = 'under maintenance'
-        """, (selected_depot,))
-
-        maintenance_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            AND LOWER(status) = 'missing'
-        """, (selected_depot,))
-
-        missing_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            AND LOWER(status) = 'to be scrapped'
-        """, (selected_depot,))
-
-        to_be_scrapped_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            AND LOWER(status) = 'scrapped'
-        """, (selected_depot,))
-
-        scrapped_assets = cur.fetchone()[0]
-
+        depot_filter = "WHERE depot = %s"
+        params = (selected_depot,)
     else:
-
-        cur.execute("SELECT COUNT(*) FROM assets")
-
-        total_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE LOWER(status) = 'active'
-        """)
-
-        active_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE LOWER(status) = 'under maintenance'
-        """)
-
-        maintenance_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE LOWER(status) = 'missing'
-        """)
-
-        missing_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE LOWER(status) = 'to be scrapped'
-        """)
-
-        to_be_scrapped_assets = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM assets
-            WHERE LOWER(status) = 'scrapped'
-        """)
-
-        scrapped_assets = cur.fetchone()[0]
+        depot_filter = ""
+        params = ()
 
     # =========================
-    # ASSETS BY DEPOT
+    # TOTAL ASSETS
     # =========================
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        """,
+        params
+    )
 
-    if selected_depot:
-
-        cur.execute("""
-            SELECT depot, COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            GROUP BY depot
-            ORDER BY depot
-        """, (selected_depot,))
-
-    else:
-
-        cur.execute("""
-            SELECT depot, COUNT(*)
-            FROM assets
-            GROUP BY depot
-            ORDER BY depot
-        """)
-
-    depot_rows = cur.fetchall()
+    total_assets = cur.fetchone()[0]
 
     # =========================
-    # ASSETS BY STATUS
+    # ACTIVE
     # =========================
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(status) = 'active'
+        """,
+        params
+    )
 
-    if selected_depot:
+    active_assets = cur.fetchone()[0]
 
-        cur.execute("""
-            SELECT status, COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            GROUP BY status
-            ORDER BY status
-        """, (selected_depot,))
+    # =========================
+    # UNDER MAINTENANCE
+    # =========================
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(status) = 'under maintenance'
+        """,
+        params
+    )
 
-    else:
+    maintenance_assets = cur.fetchone()[0]
 
-        cur.execute("""
-            SELECT status, COUNT(*)
-            FROM assets
-            GROUP BY status
-            ORDER BY status
-        """)
+    # =========================
+    # MISSING
+    # =========================
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(status) = 'missing'
+        """,
+        params
+    )
+
+    missing_assets = cur.fetchone()[0]
+
+    # =========================
+    # TO BE SCRAPPED
+    # =========================
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(status) = 'to be scrapped'
+        """,
+        params
+    )
+
+    to_be_scrapped_assets = cur.fetchone()[0]
+
+    # =========================
+    # SCRAPPED
+    # =========================
+    cur.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM assets
+        {depot_filter}
+        {"AND" if selected_depot else "WHERE"}
+        LOWER(status) = 'scrapped'
+        """,
+        params
+    )
+
+    scrapped_assets = cur.fetchone()[0]
+
+    # =========================
+    # STATUS SUMMARY
+    # =========================
+    cur.execute(
+        f"""
+        SELECT status, COUNT(*)
+        FROM assets
+        {depot_filter}
+        GROUP BY status
+        ORDER BY status
+        """,
+        params
+    )
 
     status_rows = cur.fetchall()
 
+    # =========================
+    # DEPOT CHART
+    # =========================
+    # Without a selected depot:
+    # show all depots.
+    #
+    # With a selected depot:
+    # show only the selected depot.
+    # =========================
+
+    if selected_depot:
+
+        depot_labels = [selected_depot]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+        """, (selected_depot,))
+
+        depot_values = [cur.fetchone()[0]]
+
+    else:
+
+        cur.execute("""
+            SELECT depot, COUNT(*)
+            FROM assets
+            WHERE depot IS NOT NULL
+            AND depot <> ''
+            GROUP BY depot
+            ORDER BY depot
+        """)
+
+        depot_chart_rows = cur.fetchall()
+
+        depot_labels = [row[0] for row in depot_chart_rows]
+        depot_values = [row[1] for row in depot_chart_rows]
+
+    # =========================
+    # RECENT ASSETS
+    # =========================
+    cur.execute(
+        f"""
+        SELECT asset_id,
+               depot,
+               status,
+               captured_by,
+               capture_date
+        FROM assets
+        {depot_filter}
+        ORDER BY capture_date DESC
+        LIMIT 10
+        """,
+        params
+    )
+
+    recent_assets = cur.fetchall()
+
+    # =========================
+    # CLOSE CONNECTION
+    # =========================
     cur.close()
     conn.close()
 
+    # =========================
+    # RENDER DASHBOARD
+    # =========================
     return render_template(
         "dashboard.html",
+
+        # Filter
         selected_depot=selected_depot,
         depots=depots,
+
+        # KPIs
         total_assets=total_assets,
         active_assets=active_assets,
         maintenance_assets=maintenance_assets,
         missing_assets=missing_assets,
         to_be_scrapped_assets=to_be_scrapped_assets,
         scrapped_assets=scrapped_assets,
-        depot_rows=depot_rows,
-        status_rows=status_rows
+
+        # Status
+        status_rows=status_rows,
+
+        # Depot chart
+        depot_labels=depot_labels,
+        depot_values=depot_values,
+
+        # Recent assets
+        recent_assets=recent_assets
     )
-
-
 # =========================
 # SUMMARY
 # =========================
