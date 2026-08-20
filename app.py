@@ -9,9 +9,11 @@ import cloudinary.uploader
 app = Flask(__name__)
 app.secret_key = "asset_tracker_secret_key_2026"
 init_done = False
+
 # =========================
 # CLOUDINARY
 # =========================
+
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
     api_key=os.environ.get("CLOUDINARY_API_KEY"),
@@ -22,13 +24,17 @@ cloudinary.config(
 # =========================
 # POSTGRES CONNECTION
 # =========================
+
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
+
 
 # =========================
 # INIT DB
 # =========================
+
 def init_db():
+
     conn = get_conn()
     cur = conn.cursor()
 
@@ -58,21 +64,30 @@ def init_db():
     """)
 
     conn.commit()
+
     cur.close()
     conn.close()
 
+
 init_db()
+
 
 # =========================
 # ADMIN PROTECTION
 # =========================
+
 def admin_required(f):
+
     @wraps(f)
     def wrapper(*args, **kwargs):
+
         if session.get("role") != "admin":
             return abort(403)
+
         return f(*args, **kwargs)
+
     return wrapper
+
 
 # =========================
 # HOME
@@ -80,11 +95,18 @@ def admin_required(f):
 
 @app.route("/")
 def index():
+
     return render_template(
         "index.html",
         username=session.get("username"),
         role=session.get("role")
     )
+
+
+# =========================
+# LOGIN
+# =========================
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -109,16 +131,21 @@ def login():
         conn.close()
 
         if user:
+
             session["username"] = user[1]
             session["role"] = user[3]
+
             return redirect("/")
 
         return "Invalid username or password"
 
     return render_template("login.html")
+
+
 # =========================
 # ADD ASSET
 # =========================
+
 @app.route("/add", methods=["GET", "POST"])
 def add_asset():
 
@@ -209,19 +236,19 @@ def add_asset():
             worksheet = spreadsheet.sheet1
 
             worksheet.append_row([
-    asset_id,
-    depot,
-    status,
-    description,
-    captured_by,
-    employee_number,
-    capture_date.strftime("%Y-%m-%d %H:%M:%S"),
-    image_url,
-    "",
-    "",
-    "",
-    capture_date.strftime("%Y-%m-%d %H:%M:%S")
-])
+                asset_id,
+                depot,
+                status,
+                description,
+                captured_by,
+                employee_number,
+                capture_date.strftime("%Y-%m-%d %H:%M:%S"),
+                image_url,
+                "",
+                "",
+                "",
+                capture_date.strftime("%Y-%m-%d %H:%M:%S")
+            ])
 
         except Exception as e:
 
@@ -230,9 +257,12 @@ def add_asset():
         return redirect(url_for("index"))
 
     return render_template("add_asset.html")
+
+
 # =========================
 # SEARCH
 # =========================
+
 @app.route("/search", methods=["GET", "POST"])
 def search():
 
@@ -248,13 +278,15 @@ def search():
         cur = conn.cursor()
 
         cur.execute("""
-            SELECT * FROM assets
+            SELECT *
+            FROM assets
             WHERE asset_id = %s
             ORDER BY id DESC
             LIMIT 1
         """, (asset_id,))
 
         row = cur.fetchone()
+
         cur.close()
         conn.close()
 
@@ -275,10 +307,15 @@ def search():
             days = (datetime.now() - row[8]).days
 
             if row[3] == "Missing":
+
                 verification_status = "Missing"
+
             elif days <= 180:
+
                 verification_status = "Verified"
+
             else:
+
                 verification_status = "Overdue"
                 update_required = True
 
@@ -289,9 +326,11 @@ def search():
         update_required=update_required
     )
 
+
 # =========================
 # UPDATES
 # =========================
+
 @app.route("/updates")
 def updates():
 
@@ -299,6 +338,7 @@ def updates():
     cur = conn.cursor()
 
     cur.execute("SELECT * FROM assets")
+
     rows = cur.fetchall()
 
     cur.close()
@@ -307,10 +347,19 @@ def updates():
     expired = []
 
     for r in rows:
+
         if (datetime.now() - r[8]).days >= 180:
             expired.append(r)
 
-    return render_template("updates.html", assets=expired)
+    return render_template(
+        "updates.html",
+        assets=expired
+    )
+
+
+# =========================
+# DASHBOARD
+# =========================
 
 @app.route("/dashboard")
 def dashboard():
@@ -320,14 +369,9 @@ def dashboard():
 
     selected_depot = request.args.get("depot", "")
 
-    if selected_depot:
-        cur.execute(
-            "SELECT COUNT(*) FROM assets WHERE depot = %s",
-            (selected_depot,)
-        )
-        depot_total_assets = cur.fetchone()[0]
-    else:
-        depot_total_assets = 0
+    # =========================
+    # DEPOTS
+    # =========================
 
     cur.execute("""
         SELECT DISTINCT depot
@@ -335,103 +379,186 @@ def dashboard():
         WHERE depot IS NOT NULL
         ORDER BY depot
     """)
+
     depots = [row[0] for row in cur.fetchall()]
 
-# =========================
-# KPIs
-# =========================
+    # =========================
+    # KPIs
+    # =========================
 
-if selected_depot:
+    if selected_depot:
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE depot = %s
-    """, (selected_depot,))
-    total_assets = cur.fetchone()[0]
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+        """, (selected_depot,))
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE depot = %s
-        AND LOWER(status) = 'active'
-    """, (selected_depot,))
-    active_assets = cur.fetchone()[0]
+        total_assets = cur.fetchone()[0]
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE depot = %s
-        AND LOWER(status) = 'under maintenance'
-    """, (selected_depot,))
-    maintenance_assets = cur.fetchone()[0]
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            AND LOWER(status) = 'active'
+        """, (selected_depot,))
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE depot = %s
-        AND LOWER(status) = 'missing'
-    """, (selected_depot,))
-    missing_assets = cur.fetchone()[0]
+        active_assets = cur.fetchone()[0]
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE depot = %s
-        AND LOWER(status) = 'to be scrapped'
-    """, (selected_depot,))
-    to_be_scrapped_assets = cur.fetchone()[0]
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            AND LOWER(status) = 'under maintenance'
+        """, (selected_depot,))
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE depot = %s
-        AND LOWER(status) = 'scrapped'
-    """, (selected_depot,))
-    scrapped_assets = cur.fetchone()[0]
+        maintenance_assets = cur.fetchone()[0]
 
-else:
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            AND LOWER(status) = 'missing'
+        """, (selected_depot,))
 
-    cur.execute("SELECT COUNT(*) FROM assets")
-    total_assets = cur.fetchone()[0]
+        missing_assets = cur.fetchone()[0]
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE LOWER(status) = 'active'
-    """)
-    active_assets = cur.fetchone()[0]
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            AND LOWER(status) = 'to be scrapped'
+        """, (selected_depot,))
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE LOWER(status) = 'under maintenance'
-    """)
-    maintenance_assets = cur.fetchone()[0]
+        to_be_scrapped_assets = cur.fetchone()[0]
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE LOWER(status) = 'missing'
-    """)
-    missing_assets = cur.fetchone()[0]
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            AND LOWER(status) = 'scrapped'
+        """, (selected_depot,))
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE LOWER(status) = 'to be scrapped'
-    """)
-    to_be_scrapped_assets = cur.fetchone()[0]
+        scrapped_assets = cur.fetchone()[0]
 
-    cur.execute("""
-        SELECT COUNT(*)
-        FROM assets
-        WHERE LOWER(status) = 'scrapped'
-    """)
-    scrapped_assets = cur.fetchone()[0]
+    else:
+
+        cur.execute("SELECT COUNT(*) FROM assets")
+
+        total_assets = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE LOWER(status) = 'active'
+        """)
+
+        active_assets = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE LOWER(status) = 'under maintenance'
+        """)
+
+        maintenance_assets = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE LOWER(status) = 'missing'
+        """)
+
+        missing_assets = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE LOWER(status) = 'to be scrapped'
+        """)
+
+        to_be_scrapped_assets = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM assets
+            WHERE LOWER(status) = 'scrapped'
+        """)
+
+        scrapped_assets = cur.fetchone()[0]
+
+    # =========================
+    # ASSETS BY DEPOT
+    # =========================
+
+    if selected_depot:
+
+        cur.execute("""
+            SELECT depot, COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            GROUP BY depot
+            ORDER BY depot
+        """, (selected_depot,))
+
+    else:
+
+        cur.execute("""
+            SELECT depot, COUNT(*)
+            FROM assets
+            GROUP BY depot
+            ORDER BY depot
+        """)
+
+    depot_rows = cur.fetchall()
+
+    # =========================
+    # ASSETS BY STATUS
+    # =========================
+
+    if selected_depot:
+
+        cur.execute("""
+            SELECT status, COUNT(*)
+            FROM assets
+            WHERE depot = %s
+            GROUP BY status
+            ORDER BY status
+        """, (selected_depot,))
+
+    else:
+
+        cur.execute("""
+            SELECT status, COUNT(*)
+            FROM assets
+            GROUP BY status
+            ORDER BY status
+        """)
+
+    status_rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "dashboard.html",
+        selected_depot=selected_depot,
+        depots=depots,
+        total_assets=total_assets,
+        active_assets=active_assets,
+        maintenance_assets=maintenance_assets,
+        missing_assets=missing_assets,
+        to_be_scrapped_assets=to_be_scrapped_assets,
+        scrapped_assets=scrapped_assets,
+        depot_rows=depot_rows,
+        status_rows=status_rows
+    )
+
+
 # =========================
 # SUMMARY
 # =========================
+
 @app.route("/summary")
 def summary():
 
@@ -439,15 +566,22 @@ def summary():
     cur = conn.cursor()
 
     # Total Assets
-    cur.execute("SELECT COUNT(*) FROM assets")
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+    """)
+
     total_assets = cur.fetchone()[0]
 
     # Totais por Status
+
     cur.execute("""
         SELECT status, COUNT(*)
         FROM assets
         GROUP BY status
     """)
+
     status_rows = cur.fetchall()
 
     stats = {
@@ -460,29 +594,35 @@ def summary():
     }
 
     for status, count in status_rows:
+
         if status in stats:
             stats[status] = count
 
     # Assets por Depot
+
     cur.execute("""
         SELECT depot, COUNT(*)
         FROM assets
         GROUP BY depot
         ORDER BY depot
     """)
+
     depot_rows = cur.fetchall()
 
     # Últimos 10 ativos
+
     cur.execute("""
-        SELECT asset_id,
-               depot,
-               status,
-               captured_by,
-               capture_date
+        SELECT
+            asset_id,
+            depot,
+            status,
+            captured_by,
+            capture_date
         FROM assets
         ORDER BY capture_date DESC
         LIMIT 10
     """)
+
     recent_assets = cur.fetchall()
 
     cur.close()
@@ -495,9 +635,12 @@ def summary():
         depot_rows=depot_rows,
         recent_assets=recent_assets
     )
+
+
 # =========================
 # ADMIN PANEL
 # =========================
+
 @app.route("/admin")
 @admin_required
 def admin():
@@ -520,9 +663,12 @@ def admin():
         "admin.html",
         assets=assets
     )
+
+
 # =========================
 # EDIT ASSET
 # =========================
+
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
 @admin_required
 def edit_asset(id):
@@ -586,6 +732,7 @@ def edit_asset(id):
 # =========================
 # DELETE ASSET
 # =========================
+
 @app.route("/delete/<int:id>")
 @admin_required
 def delete_asset(id):
@@ -604,9 +751,12 @@ def delete_asset(id):
     conn.close()
 
     return redirect(url_for("admin"))
+
+
 # =========================
 # TEST USERS TABLE
 # =========================
+
 @app.route("/test-users")
 def test_users():
 
@@ -627,6 +777,10 @@ def test_users():
     return str(tables)
 
 
+# =========================
+# CREATE ADMINS
+# =========================
+
 @app.route("/create-admins")
 def create_admins():
 
@@ -641,18 +795,32 @@ def create_admins():
     ]
 
     for username, password, role in admins:
+
         cur.execute("""
-            INSERT INTO users (username, password, role)
+            INSERT INTO users (
+                username,
+                password,
+                role
+            )
             VALUES (%s, %s, %s)
             ON CONFLICT (username) DO NOTHING
-        """, (username, password, role))
+        """, (
+            username,
+            password,
+            role
+        ))
 
     conn.commit()
+
     cur.close()
     conn.close()
 
     return "Admins created successfully"
 
+
+# =========================
+# LIST USERS
+# =========================
 
 @app.route("/list-users")
 def list_users():
@@ -677,30 +845,45 @@ def list_users():
 # =========================
 # EXPORT CSV
 # =========================
+
 @app.route("/export")
 def export():
+
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("SELECT * FROM assets")
+
     rows = cur.fetchall()
 
     cur.close()
     conn.close()
 
     def generate():
+
         yield "id,asset_id,depot,status,description,captured_by,employee_number,image,capture_date\n"
+
         for r in rows:
-            yield ",".join([str(x) if x else "" for x in r]) + "\n"
+
+            yield ",".join([
+                str(x) if x else ""
+                for x in r
+            ]) + "\n"
 
     return Response(
         generate(),
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=assets.csv"}
+        headers={
+            "Content-Disposition":
+            "attachment; filename=assets.csv"
+        }
     )
+
+
 # =========================
 # TEST GOOGLE SHEETS
 # =========================
+
 @app.route("/test-sheets")
 def test_sheets():
 
@@ -729,15 +912,23 @@ def test_sheets():
         "TESTE GOOGLE SHEETS",
         "Render",
         "Funcionou",
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
     ])
 
     return "Google Sheets funcionando!"
+
+
 # =========================
 # RUN
 # =========================
+
 if __name__ == "__main__":
+
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000))
+        port=int(
+            os.environ.get("PORT", 5000)
+        )
     )
