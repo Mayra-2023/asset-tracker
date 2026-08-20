@@ -337,106 +337,98 @@ def dashboard():
     """)
     depots = [row[0] for row in cur.fetchall()]
 
-    # KPIs
+# =========================
+# KPIs
+# =========================
+
+if selected_depot:
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE depot = %s
+    """, (selected_depot,))
+    total_assets = cur.fetchone()[0]
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE depot = %s
+        AND LOWER(status) = 'active'
+    """, (selected_depot,))
+    active_assets = cur.fetchone()[0]
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE depot = %s
+        AND LOWER(status) = 'under maintenance'
+    """, (selected_depot,))
+    maintenance_assets = cur.fetchone()[0]
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE depot = %s
+        AND LOWER(status) = 'missing'
+    """, (selected_depot,))
+    missing_assets = cur.fetchone()[0]
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE depot = %s
+        AND LOWER(status) = 'to be scrapped'
+    """, (selected_depot,))
+    to_be_scrapped_assets = cur.fetchone()[0]
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM assets
+        WHERE depot = %s
+        AND LOWER(status) = 'scrapped'
+    """, (selected_depot,))
+    scrapped_assets = cur.fetchone()[0]
+
+else:
+
     cur.execute("SELECT COUNT(*) FROM assets")
     total_assets = cur.fetchone()[0]
 
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
-        WHERE LOWER(status)='active'
+        WHERE LOWER(status) = 'active'
     """)
     active_assets = cur.fetchone()[0]
 
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
-        WHERE LOWER(status)='undermaintenance'
+        WHERE LOWER(status) = 'under maintenance'
     """)
     maintenance_assets = cur.fetchone()[0]
 
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
-        WHERE LOWER(status)='missing'
+        WHERE LOWER(status) = 'missing'
     """)
     missing_assets = cur.fetchone()[0]
 
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
-        WHERE LOWER(status)='to be scrapped'
+        WHERE LOWER(status) = 'to be scrapped'
     """)
     to_be_scrapped_assets = cur.fetchone()[0]
 
     cur.execute("""
         SELECT COUNT(*)
         FROM assets
-        WHERE LOWER(status)='scrapped'
+        WHERE LOWER(status) = 'scrapped'
     """)
     scrapped_assets = cur.fetchone()[0]
-
-    # Assets by Depot
-    if selected_depot:
-        cur.execute("""
-            SELECT depot, COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            GROUP BY depot
-            ORDER BY depot
-        """, (selected_depot,))
-    else:
-        cur.execute("""
-            SELECT depot, COUNT(*)
-            FROM assets
-            GROUP BY depot
-            ORDER BY depot
-        """)
-
-    depot_data = cur.fetchall()
-    depot_labels = [row[0] for row in depot_data]
-    depot_values = [row[1] for row in depot_data]
-
-    # Assets by Status
-    if selected_depot:
-        cur.execute("""
-            SELECT status, COUNT(*)
-            FROM assets
-            WHERE depot = %s
-            GROUP BY status
-            ORDER BY status
-        """, (selected_depot,))
-    else:
-        cur.execute("""
-            SELECT status, COUNT(*)
-            FROM assets
-            GROUP BY status
-            ORDER BY status
-        """)
-
-    status_data = cur.fetchall()
-    status_labels = [row[0] for row in status_data]
-    status_values = [row[1] for row in status_data]
-
-    cur.close()
-    conn.close()
-
-    return render_template(
-        "dashboard.html",
-        total_assets=total_assets,
-        active_assets=active_assets,
-        maintenance_assets=maintenance_assets,
-        missing_assets=missing_assets,
-        to_be_scrapped_assets=to_be_scrapped_assets,
-        scrapped_assets=scrapped_assets,
-        depot_total_assets=depot_total_assets,
-        depot_labels=depot_labels,
-        depot_values=depot_values,
-        status_labels=status_labels,
-        status_values=status_values,
-        depots=depots,
-        selected_depot=selected_depot
-    )
 # =========================
 # SUMMARY
 # =========================
