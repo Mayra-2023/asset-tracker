@@ -28,8 +28,11 @@ html
     ========================== -->
 
     <h2 class="mb-4">
-        Asset Analytics Dashboard
-    </h2>
+    Asset Analytics Dashboard
+    {% if selected_depot %}
+        — {{ selected_depot | upper }}
+    {% endif %}
+</h2>
 
 
     <!-- =========================
